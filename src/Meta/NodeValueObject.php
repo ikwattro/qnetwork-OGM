@@ -1,6 +1,7 @@
 <?php 
 namespace Meta;
 use Reflection\Reflector;
+use Reflection\ClosureReflector;
 
 class NodeValueObject extends Node{
 	
@@ -20,16 +21,18 @@ class NodeValueObject extends Node{
 		$class = $this->getClass();
 		$object = $this->getDomainObject();
 		
-		$properties = Reflector::getPropertiesWithAnnotation($class, Reflector::MATCH_ANNOTATION);
+		$properties = Reflector::getPropertiesWithAnnotation($class, Reflector::GRAPH_PROPERTY_ANNOTATION);
 		$values = [];
 
 		foreach ($properties as $property) {
 			
-			$values[$property->key] = ClosureReflector::getInstance()->getObjectPropertyByReference($object, $property->propertyName);
-			settype($values[$property->key], $property->type);
+			if( $property->match ){
+				$values[$property->key] = ClosureReflector::getInstance()->getObjectPropertyByReference($object, $property->propertyName);
+				settype($values[$property->key], $property->type);
+			}
 			
 		}
-		// dd($values)
+		
 		return $values;
 
 	}

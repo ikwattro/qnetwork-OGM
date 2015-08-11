@@ -8,7 +8,7 @@ use Annotations\RelateTo;
 use Annotations\GraphProperty;
 
 /** 
- * @Node(labels = {"User"})
+ * @Node(labels = {"UserSession"})
  * @GraphEntity
  * 
  * @author Cezar Grigore <grigorecezar@gmail.com>

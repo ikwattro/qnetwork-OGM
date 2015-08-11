@@ -17,10 +17,10 @@ class UnitOfWorkTest extends OGMTest{
 		$user->newSession();
 
 		$this->unitOfWork
-					->persist($user)
-					->persist( new EmailAddress('abc@yo.io') )
-					->persist( new EmailAddress('lola@up.org') )
-					->persist( new EmailAddress('hello@us.gov') );
+					->persist($user);
+					// ->persist( new EmailAddress('abc@yo.io') )
+					// ->persist( new EmailAddress('lola@up.org') )
+					// ->persist( new EmailAddress('hello@us.gov') );
 					
 		$this->unitOfWork->commit();
 

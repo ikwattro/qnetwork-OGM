@@ -1,5 +1,6 @@
 <?php 
 namespace Core;
+use Neoxygen\NeoClient\ClientBuilder;
 
 class NeoClient implements TransactionalManager{
 
@@ -20,11 +21,15 @@ class NeoClient implements TransactionalManager{
 	 */
 	protected $relationshipStatements = [];
 
-	public function commit(){
+	public function flush(){
 
 		$statements = array_merge($this->getNodeStatements(), $this->getRelationshipStatements());
 		
-		$client = Client::create();
+		$client = ClientBuilder::create()
+			->addConnection('default','http','localhost', 7474, true, 'neo4j', '123123')
+				->setDefaultTimeout(180)
+				->setAutoFormatResponse(true)
+				->build();
 	
 		try {
 
@@ -51,11 +56,11 @@ class NeoClient implements TransactionalManager{
 	public function addNodeStatement($statement){
 
 		if( ! isset($statement['statement']) || ! is_string($statement['statement'])){
-			throw new BadStatementException;
+			throw new WrongStatementException;
 		}
 
 		if( ! isset($statement['parameters']) || ! is_array($statement['parameters'])){
-			throw new BadStatementException;
+			throw new WrongStatementException;
 		}
 
 		$this->nodeStatements[] = $statement;
@@ -65,11 +70,11 @@ class NeoClient implements TransactionalManager{
 	public function addRelationshipStatement($statement){
 
 		if( ! isset($statement['statement']) || ! is_string($statement['statement'])){
-			throw new BadStatementException;
+			throw new WrongStatementException;
 		}
 
 		if( ! isset($statement['parameters']) || ! is_array($statement['parameters'])){
-			throw new BadStatementException;
+			throw new WrongStatementException;
 		}
 
 		$this->relationshipStatements[] = $statement;

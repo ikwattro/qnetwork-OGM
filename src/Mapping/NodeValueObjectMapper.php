@@ -16,10 +16,14 @@ class NodeValueObjectMapper extends NodeMapper{
 	public function insert(NodeValueObjectMeta $object){
 
 		$statement = $this->getStatementForMerge($object);
-		dd($statement);
-
+		$this->addNodeStatement($statement[0], $statement[1]);
+		// dd('ola');
 	}
 
+	/**
+	 * 
+	 * @return [query, params]
+	 */
 	public function getStatementForMerge(NodeValueObjectMeta $object){
 
 		$class = $object->getClass();
@@ -30,44 +34,20 @@ class NodeValueObjectMapper extends NodeMapper{
 		 */
 		$labels = $object->getLabels();
 		$labels = $this->mapLabelsToCypher($labels);
-		$properties = $object->getProperties();
 		
-
-		/**
-		 * Loops through $object meta and detects which graph properties
-		 * are being used for the match and which ones aren't.
-		 * The non match properties will be created at insert.
-		 */
+		
 		$matchProperties = $object->getMatchProperties();
-		dd($matchProperties);
-		$nonMatchProperties = array_merge($nonMatchProperties, [ 'created_at' => $this->getDateTime(), '_class' => $class ]);
+		$properties = array_merge($object->getProperties(), 
+			[ 'created_at' => 'Some time', '_class' => $class ]);
+		$params = $properties;
 		
-		/**
-		 * Define $params that are being passed with the statemtn as 
-		 * the match properties merged with the nonMatchProperties
-		 */
-		$params = array_merge($matchProperties, $nonMatchProperties);
-
-		/**
-		 * Map match properties, non match properties and labels to cypher 
-		 * in order to create the query.
-		 */
 		$matchProperties = $this->mapPropertiesToCypherForMatch($matchProperties);
-		$nonMatchProperties = $this->mapPropertiesToCypher($nonMatchProperties);
-		$labels = $this->mapLabelsToCypher($labels);
+		$properties = $this->mapPropertiesToCypher($properties);
 		
-		/**
-		 * Building the transactional query and adding it to unit of work -> transactional manager
-		 */
-		$query = "MERGE (value:{$labels} {{$matchProperties}}) ON CREATE SET {$nonMatchProperties}";
-		$this->addNodeStatement($query, $params);
+		$query = "MERGE (value:{$labels} {{$matchProperties}}) ON CREATE SET {$properties}";
 		
-		/**
-		 * maps the relationships for this value object
-		 */
-		// $this->insertOneToOneRelationships($object);
-		// $this->insertOneToManyRelationships($object);
-
+		return [$query, $params];
+		
 	}
 
 }

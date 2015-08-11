@@ -18,7 +18,6 @@ class EmailAddress{
 
 	/**
 	 * @GraphProperty(type = "string", key = "email", match = true)
-	 * @Match
 	 */
 	private $email = null;
 	

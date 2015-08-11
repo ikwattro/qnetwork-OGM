@@ -51,7 +51,7 @@ class UnitOfWork {
 	}
 
 	public function getManager(){
-		
+
 		return $this->transactionalManager;
 
 	}
@@ -79,6 +79,8 @@ class UnitOfWork {
 				}	
 		}
 
+		$this->transactionalManager->flush();
+		
 	}
 
 	/**
