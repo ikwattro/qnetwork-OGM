@@ -1,39 +1,42 @@
 <?php 
 namespace Meta;
-use Reflection\Reflector;
-use Reflection\ClosureReflector;
 
 class NodeValueObject extends Node{
 	
+	// TODO: validate against required annotations
+	protected function validate(){}
+
+	public function getRepositoryNamespace(){
+
+		if( isset($this->repository) ){
+			return $this->repository;
+		}
+
+		$reflector = $this->getReflector();
+		$repository = $reflector->getClassAnnotation($this->getClass(), $reflector::REPOSITORY_ANNOTATION);
+
+		if( $repository !== null){
+			return $repository->namespace;
+		}
+
+		return 'Repositories\NodeValueObjectRepository';
+
+	}
+
 	public function getMapperNamespace(){
 
-		$mapper = Reflector::getClassAnnotation($this->getClass(), Reflector::MAPPER_ANNOTATION);
+		if( isset($this->mapper) ){
+			return $this->mapper;
+		}
+
+		$reflector = $this->getReflector();
+		$mapper = $reflector->getClassAnnotation($this->getClass(), $reflector::MAPPER_ANNOTATION);
+
 		if( $mapper !== null){
 			return $mapper->namespace;
 		}
 
 		return 'Mapping\NodeValueObjectMapper';
-
-	}
-
-	public function getMatchProperties(){
-
-		$class = $this->getClass();
-		$object = $this->getDomainObject();
-		
-		$properties = Reflector::getPropertiesWithAnnotation($class, Reflector::GRAPH_PROPERTY_ANNOTATION);
-		$values = [];
-
-		foreach ($properties as $property) {
-			
-			if( $property->match ){
-				$values[$property->key] = ClosureReflector::getInstance()->getObjectPropertyByReference($object, $property->propertyName);
-				settype($values[$property->key], $property->type);
-			}
-			
-		}
-		
-		return $values;
 
 	}
 

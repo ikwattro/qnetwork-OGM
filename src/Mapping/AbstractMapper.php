@@ -2,6 +2,9 @@
 namespace Mapping;
 use Core\UnitOfWork;
 
+/**
+ * @author Cezar Grigore <tuck2226@gmail.com>
+ */
 abstract class AbstractMapper {
 
 	/**
@@ -53,33 +56,6 @@ abstract class AbstractMapper {
 
 	}
 	
-	protected function mapPropertiesToCypher($properties, $name = 'value'){
-
-		$cypher = '';
-
-		foreach ($properties as $property => $value) {
-			
-			$cypher .= "$name.$property={" . $property ."},";
-
-		}
-		
-		return rtrim($cypher, ",");
-
-	}
-
-	protected function mapPropertiesToCypherForMatch($properties, $name = 'value'){
-
-		$cypher = '';
-
-		foreach ($properties as $property => $value) {
-			
-			$cypher .= "$property: {" . $property ."},";
-
-		}
-		
-		return rtrim($cypher, ",");
-
-	}
 	/**
 	 * Returning the results set from client
 	 *

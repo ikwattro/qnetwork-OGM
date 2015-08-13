@@ -1,13 +1,15 @@
 <?php 
 namespace Meta;
-use Reflection\Reflector;
 
-class Node extends MetaObject{
+abstract class Node extends MetaObject{
 
+	abstract public function getRepositoryNamespace();
+	abstract public function getMapperNamespace();
+	
 	public function getLabels(){
 
-		$class = $this->getClass();
-		$annotation = Reflector::getClassAnnotation($class, Reflector::NODE_ANNOTATION);
+		$reflector = $this->getReflector();
+		$annotation = $reflector->getClassAnnotation($this->getClass(), $reflector::NODE_ANNOTATION);
 
 		return $annotation->labels;
 

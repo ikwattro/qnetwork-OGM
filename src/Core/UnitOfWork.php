@@ -80,7 +80,7 @@ class UnitOfWork {
 		}
 
 		$this->transactionalManager->flush();
-		
+
 	}
 
 	/**
@@ -148,7 +148,7 @@ class UnitOfWork {
 
 		// first we get the meta object, this operation will also check that the object provided
 		// can be persisted eg. has the correct annotations; from now on we will work only with 
-		// meta objects for better consistency, type-checking etc.
+		// meta objects for better consistency and type-checking;s
 		$metaObject = $this->getMetaObject($object);
 		$hash = $this->getObjectHash($metaObject);
 

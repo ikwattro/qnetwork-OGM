@@ -3,16 +3,17 @@ namespace Mapping;
 use Core\MetaObject;
 use Core\OGMException;
 use Proxy\ValueHolder;
+use Proxy\Proxy;
 use Core\Collection;
-use Meta\Node as NodeMeta;
+use Meta\Node as NodeMetaObject;
 use Core\ObjectState;
 
 /**
- * @author Cezar Grigore <grigorecezar@gmail.com>
+ * @author Cezar Grigore <tuck2226@gmail.com>
  */
 class NodeMapper extends AbstractMapper{
 
-	// abstract protected function load($results);
+	use CypherTrait, NodeFinder;
 
 	/**
 	 * Takes an array of (key, value) pairs representing the node's properties
@@ -81,43 +82,6 @@ class NodeMapper extends AbstractMapper{
 
 	}
 
-	public function match($object, $name = "value"){
-
-		/**
-		 * Loops through $object meta and detects which graph properties
-		 * are being used for the match (id for Entity and merging properties for ValueObject)
-		 */
-		$params = NodeReflector::getMatchPropertiesAsValues($object);
-		$labels = NodeReflector::getLabels($object);
-
-		$labels = $this->mapLabelsToCypher( $labels );
-		// $matchProperties = $this->mapPropertiesToCypherForMatch( $params, $name, true );
-		list($matchProperties, $params) = $this->mapPropertiesTEST($params);
-		$query = "MATCH ($name:{$labels} {{$matchProperties}})";
-		
-		return [$query, $params];
-
-	}
-
-	protected function mapPropertiesTEST($properties){
-
-		$cypher = '';
-		$newParams = [];
-
-		foreach ($properties as $property => $value) {
-			
-			$key = uniqid() . '_' . $property; 
-			$newParams[$key] = $value;
-
-			$cypher .= "$property: {" . $key ."},";
-
-		}
-		
-		$cypher = rtrim($cypher, ",");
-		return [$cypher, $newParams];
-
-	}
-
 	/**
 	 * Merges a relationship between 2 nodes $from and $to
 	 *
@@ -140,127 +104,54 @@ class NodeMapper extends AbstractMapper{
 
 	}
 
-	/**
-	 * Loops through all OneToOne properties that this object has
-	 * and inserts the relationship between $entity and the end object
-	 *
-	 * @param QNetwork\Infrastructure\OGM\Core\Entity
-	 * @return void
-	 */
-	protected function insertOneToOneRelationships($entity){
+	public function updateRelationships(NodeMetaObject $object){
 
-		$oneToOne = NodeReflector::getOneToOneAssociationsAsValues($entity);
-		
-		foreach ($oneToOne as $relationshipType => $object) {
-			$this->mergeRelationship($entity, $object, $relationshipType);
-		}
+		$associations = $object->getAssociations();
 
-	}
-
-	/**
-	 * Loops through all OneToMany properties that this object has
-	 * and inserts the relationship between $entity and the end objects
-	 *
-	 * @param QNetwork\Infrastructure\OGM\Core\Entity
-	 * @return void
-	 */
-	protected function insertOneToManyRelationships($entity){
-
-		$oneToMany = NodeReflector::getOneToManyAssociationsAsValues($entity);
-		
-		foreach ($oneToMany as $relationshipType => $collection) {
+		foreach ($associations as $value) {
 			
-			foreach ($collection->get() as $object) {
-				$this->mergeRelationship($entity, $object, $relationshipType);
-			}
+			// If the association is a collection, loop throw all objects in collection
+			// get the statements and continue to next value
+			if($value instanceof Collection){
+				dd($value);
+				$collection = $value;
+				foreach ($collection as $collectionObject) {
 
-		}
+					$statement = $this->getMergeRelationshipStatement($collectionObject);
+					$this->addRelationshipStatement($statement[0], $statement[1]);
 
-	}
-
-	public function updateRelationships($object){
-
-		$this->updateOneToOneRelationships($object);
-		$this->updateOneToManyRelationships($object);
-
-	}
-
-	/**
-	 * Loops through all the OneToOne properties of $entity and checks
-	 * them against the $original object (usually pulled from DB or cleaned).
-	 * If any property is different than the old relationship is being deleted
-	 * while a new one pointing to the new object will be inserted.
-	 *
-	 * @param QNetwork\Infrastructure\OGM\Core\Entity
-	 * @return void
-	 */
-	protected function updateOneToOneRelationships($entity){
-
-		$oneToOne = NodeReflector::getOneToOneAssociationsAsValues($entity);
-		
-		foreach ($oneToOne as $relationshipType => $object){
-
-			// DELETE relationship
-			$this->deleteRelationship($entity, $relationshipType);
-
-			// INSERT relationship 
-			$this->mergeRelationship($entity, $object, $relationshipType);
-
-		}
-		
-	}
-
-	protected function updateOneToManyRelationships($entity){
-		
-		$oneToMany = NodeReflector::getOneToManyAssociationsAsValues($entity);
-
-		foreach ($oneToMany as $relationshipType => $collection) {
-			
-			if( $collection->isEmpty() ){
+				}
 				continue;
+
 			}
-			
-			/*foreach ($collection->getRemovedObjects() as $object) {
-				// DELETE relationship
-				$this->deleteRelationship($entity, $relationshipType, $object);
-			}*/
 
-			foreach ($collection as $object) {
-				// DELETE relationship
-				// $this->deleteRelationship($entity, $relationshipType, $object);
-
-				// INSERT relationship 
-				$this->mergeRelationship($entity, $object, $relationshipType);
-			}			
-
-		}
-		
-	}
-
-	/**
-	 * Transform an array of labels to cypher
-	 *
-	 * @param array
-	 * @return string
-	 */
-	public function mapLabelsToCypher($labels){
-
-		$cypherLabels = '';
-    	foreach ($labels as $label) {
-			
-			$cypherLabels .= $label . ':';
+			$statement = $this->getMergeRelationshipStatement($value);
+			$this->addRelationshipStatement($statement[0], $statement[1]);
 
 		}
 
-		$cypherLabels = rtrim($cypherLabels, ":");
+	}
 
-		return $cypherLabels;
+	public function getMergeRelationshipStatement(NodeMetaObject $from, NodeMetaObject $to){
+		dd($object);
+		// if the value attached is a proxy do nothing as the relationship already exists
+		if($value instanceof Proxy){
+			return null;
+		}
+
+		// if it is not a Proxy and the object is an entity
+		// then it is a new value and we insert the relationship
+
+		// if it is not a Proxy and the object is a value object
+		// then we merge the relationship	
 
 	}
+
+	
 
 	/**
 	 * Deletes the $type relationship between 2 nodes $from and $to .
-	 * The QNetwork\OGM ensures by default that there is only one relationship
+	 * The OGM ensures by default that there is only one relationship
 	 * of a given type between any 2 given domain objects.
 	 *
 	 * @param DomainObject the start node
@@ -285,7 +176,6 @@ class NodeMapper extends AbstractMapper{
 			$query .= " MATCH (from)-[r:{$type}]->() DELETE r";
 		}
 
-		// echo $query;die();
 		$this->addRelationshipStatement($query, $params);
 
 	}
@@ -298,7 +188,7 @@ class NodeMapper extends AbstractMapper{
 	 * @param Meta\Node
 	 * @return void
 	 */
-	protected function getStatementForSettingNodeProperties(NodeMeta $object){
+	protected function getStatementForSettingNodeProperties(NodeMetaObject $object){
 
 		$class = $object->getClass();
 		
@@ -315,24 +205,24 @@ class NodeMapper extends AbstractMapper{
 		 */
 		switch( $object->getState() ){
 			case ObjectState::STATE_NEW:
-				$params = [ 'created_at' => 'todo', '_class' => $class ];
-				$params = array_merge($properties, $params);
-				$properties = $this->mapPropertiesToCypher($params);
-		
-				$query = "CREATE (value:{$labels}) SET {$properties}";
-				break;
+			$params = [ 'created_at' => 'todo', '_class' => $class ];
+			$params = array_merge($properties, $params);
+			$properties = $this->mapPropertiesToCypher($params);
+
+			$query = "CREATE (value:{$labels}) SET {$properties}";
+			break;
 
 			case ObjectState::STATE_DIRTY;
-				$params = [ 'updated_at' => 'todo' ];
-				$params = array_merge($properties, $params);
-				$properties = $this->mapPropertiesToCypher($params);
+			$params = [ 'updated_at' => 'todo' ];
+			$params = array_merge($properties, $params);
+			$properties = $this->mapPropertiesToCypher($params);
 
-				$query = "MATCH (value:{$labels} { id: {id} }) SET {$properties}";
-				break;
+			$query = "MATCH (value:{$labels} { id: {id} }) SET {$properties}";
+			break;
 
 			default:
-				throw new OGMException('You are trying to set the node properties but the state provided is invalid.');
-				break;
+			throw new OGMException('You are trying to set the node properties but the state provided is invalid.');
+			break;
 		}
 
 		return [$query, $params];

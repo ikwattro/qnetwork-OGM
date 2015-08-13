@@ -4,16 +4,23 @@ use Models\User;
 use Models\EmailAddress;
 use Core\Object;
 use Core\UnitOfWork;
+use Core\UnitOfWork2;
+use Meta\MetadataFactory;
 use Core\NeoClient;
-use Reflection\Reflector;
+use Doctrine\Common\Annotations\AnnotationReader;
+use Doctrine\Common\Annotations\AnnotationRegistry;
+use Meta\ReflectionClass;
 
 class OGMTest extends \PHPUnit_Framework_TestCase {
 
 	public function setUp(){
 
 		\Kint::enabled(true);
-		Reflector::registerAnnotations();
-		$this->unitOfWork = new UnitOfWork(new NeoClient);
+		
+		$reflector = new ReflectionClass(new AnnotationReader(), new AnnotationRegistry());
+		$this->unitOfWork = new UnitOfWork2(
+			new NeoClient(), new MetadataFactory($reflector)
+			);
 
 	}
 

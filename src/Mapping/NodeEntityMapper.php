@@ -26,6 +26,8 @@ class NodeEntityMapper extends NodeMapper{
 		$statement = $this->getStatementForSettingNodeProperties($entity);
 		$this->addNodeStatement($statement[0], $statement[1]);
 
+		$this->updateRelationships($entity);
+		
 		/**
 		 * Clean the entity - add it to identity map
 		 * and keep a clone of this original for future updates
