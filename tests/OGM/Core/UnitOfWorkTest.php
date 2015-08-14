@@ -14,12 +14,10 @@ class UnitOfWorkTest extends OGMTest{
 
 		$email = new EmailAddress('test@domain.com');
 		$user = new User( $email, new Password('123123') );
-		$user->newSession();
+		$user->newSession()->newSession()->newSession();
 
 		// $this->unitOfWork->persist( $email->getDomain() );
 		$this->unitOfWork->persist( $user );
-		$this->unitOfWork->commit();
-		die();
 		$this->unitOfWork
 					->persist($user)
 					->persist( new EmailAddress('abc@yo.io') )

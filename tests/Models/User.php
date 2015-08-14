@@ -34,6 +34,13 @@ class User extends Entity{
      */
 	protected $password = null; 
 
+	/**
+	 * @RelateTo(type = "IS_A")
+	 *
+	 * @var Models\Person
+	 */
+	protected $person = null;
+
 	public function __construct(EmailAddress $username, $password){
 
 		$this->username = $username;
@@ -56,6 +63,13 @@ class User extends Entity{
 	public function newSession(){
 
 		$this->sessions[] = new UserSession();
+		return $this;
+
+	}
+
+	public function isA(Person $person){
+
+		$this->person = $person;
 		return $this;
 
 	}
