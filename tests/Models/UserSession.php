@@ -13,7 +13,7 @@ use Annotations\GraphProperty;
  * 
  * @author Cezar Grigore <grigorecezar@gmail.com>
  */
-class UserSession {
+class UserSession extends Entity{
 
 	/**
 	 * @GraphProperty(type = "string", key = "started_at")

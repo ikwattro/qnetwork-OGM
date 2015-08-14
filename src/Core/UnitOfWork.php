@@ -1,144 +1,160 @@
 <?php 
 namespace Core;
-use Meta\MetaFactory;
-use Meta\MetaObject;
-use Proxy\ValueHolder;
+use Meta\MetadataFactory;
+use Meta\NodeValueObject as MetaNodeValueObject;
+use Meta\NodeEntity as MetaNodeEntity;
 
 class UnitOfWork {
 
+	/**
+     * The identity map that holds references to all managed domain objects that have
+     * an identity (Entities); check Domain-Driven-Design to learn more about entities and value objects; 
+     * if an object that already exists in-memory is being pulled from db again
+     * then a reference to the in-memory object will be returned.
+     * http://martinfowler.com/eaaCatalog/identityMap.html
+     *
+     * @var Core\IdentityMap
+     */
 	protected $identityMap = null;
-	protected $managedObjects = null;
-	protected $removedObjects = null;
+
+	/**
+	 * Keeps track of all objects managed by this unit of work; the persist
+	 * method has been used on them; cascade persist will be applied at commit time
+	 *
+	 * @var Core\Collection
+	 */
+	protected $managed = null;
+
+	/**
+	 * Keeps track of all objects scheduled to be deleted by this unit of work; 
+	 * No cascade delete is applied;
+	 *
+	 * @var Core\Collection
+	 */
+	protected $removed = null;
 
 	/**
 	 * Handles database connection and knows how to handle transactions.
 	 *
 	 * @var Core\TransactionalManager
 	 */
-	protected $transactionalManager = null;
+	protected $manager = null;
 
 	/**
      * The metadata factory, used to retrieve the OGM metadata of domain objects.
      *
      * @var Meta\MetaObject
      */
-    private $metaFactory = null;
+	protected $metadataFactory = null;
 
-    /**
-     * The proxy factory used to create dynamic proxies.
-     *
-     * @var Proxy\ProxyFactory
-     */
-    private $proxyFactory = null;
-    /**
-     * The repository factory used to create dynamic repositories.
-     *
-     * @var Repositories\RepositoryFactory
-     */
-    private $repositoryFactory = null;
+	public function __construct(TransactionalManager $manager, MetadataFactory $metadataFactory){
 
-	public function __construct(TransactionalManager $transactionalManager){
+		$this->manager = $manager;
+		$this->metadataFactory = $metadataFactory;
 
-		$this->transactionalManager = $transactionalManager;
-
-		$this->identityMap = new Collection();
-		$this->managedObjects = new Collection();
-		$this->removedObjects = new Collection();
-
-		// TODO: inject a meta factory, do not create statically;
-		$this->metaFactory = new MetaFactory();
+		$this->identityMap = new IdentityMap();
+		$this->managed = new Collection();
+		$this->removed = new Collection();
 
 	}
 
 	public function getManager(){
 
-		return $this->transactionalManager;
+		return $this->manager;
 
 	}
 
 	public function commit(){
 
-		/**
-		 * Looping through all managed objects and cascade persist;
-		 * keep in mind that we work only with MetaObject's
-		 */
-		$managed = new Collection();
-		foreach ($this->managedObjects as $metaObject) {
-			$this->cascadeManage($metaObject, $managed);	
-		}
-		
-		foreach ($managed as $key => $metaObject) {
-			switch ( $metaObject->getState() ) {
-					case ObjectState::STATE_NEW:
-						$this->getMapper($metaObject)->insert($metaObject);
-						break;
-					
-					default:
-						# code...
-						break;
-				}	
+		$allManaged = new Collection();
+		foreach ($this->managed as $hash => $object) {
+			$this->cascadeManage($object, $allManaged);
 		}
 
-		$this->transactionalManager->flush();
+		// update the managed objects to allManaged
+		$this->managed = $allManaged;
+
+		foreach ($this->managed as $object) {
+			
+			$state = $this->getDomainObjectState($object);
+			switch ($state) {
+				case ObjectState::STATE_NEW:
+					$this->getMapper($object)->insert($object);
+					break;
+				
+				case ObjectState::STATE_DIRTY:
+					$this->getMapper($object)->update($object);
+					break;
+
+				case ObjectState::STATE_CLEAN:
+					// DO nothing
+					break;
+
+				case ObjectState::STATE_REMOVED:
+					$this->getMapper($object)->delete($object);
+					break;
+
+				default:
+					throw new OGMException('Unexpected state for the object provided.');
+					break;
+			}
+
+		}
+
+		$this->getManager()->flush();
 
 	}
 
-	/**
-	 * Loops through all the associations of the domain object
-	 * and manages the objects attached until all the graph associated is managed;
-	 * a $managed collection will return the graph filled with all objects in the graph.
-	 * We can only cascade objects of type MetaObject that promise consistency;
-	 *
-	 * @param Core\MetaObject
-	 * @param Core\Collection
-	 * @return Core\Collection
-	 */
-	public function cascadeManage(MetaObject $object, Collection $managed){
-		
-		// if the holding object is a proxy and is not initialized, ignore;
-		if( $object->getProxy() && ! $object->getProxy()->__isInitialized() ){
-			return ;
+	private function cascadeManage($object, Collection $managed){
+
+		if( ! is_object($object) || $object instanceof \Traversable){
+			throw new OGMException('You cannot cascade manage something that is not an object, or a traversable object.');
 		}
 
-		$hash = $this->getObjectHash($object);
-		if( $managed->get($hash) ){
-			return ;
-		}
+		$this->generateIdForEntity($object);
 
-		// TODO: check if in removed objects
-
+		$hash = $this->getHash($object);
 		$managed->set($hash, $object);
-		
-		foreach ($object->getAssociations() as $association) {
 
-			// if collection iterate over all objects attached and recursively cascade manage
-			if($association instanceof Collection){
+		$meta = $this->getClassMetadata($object);
+		$associations = $meta->getAssociations($object);
+
+		foreach ($associations as $association) {
+			
+			if( is_array($association) || $association instanceof \Traversable ){
 				
-				foreach ($association as $object) {
-
-					$meta = $this->getMetaObject($object);
-					$this->cascadeManage($meta, $managed);
-
+				foreach ($association as $value) {
+					$this->cascadeManage($value, $managed);
 				}
-
 				continue;
 
 			}
 
-			// if not collection then get cascade manage only the associated object
-			$meta = $this->getMetaObject($association);
-			$this->cascadeManage($meta, $managed);
+			$this->cascadeManage($association, $managed);
 
 		}
 
 	}
 
-	 /**
+	private function generateIdForEntity($object){
+
+		$meta = $this->getClassMetadata($object);
+		if($meta instanceof MetaNodeEntity){
+			$meta->setId($object);
+		}
+
+		return $this;
+
+	}
+
+	/**
      * Persists a domain object as part of the current unit of work.
+     * Traversal (cascade persist) of the object will happen at commit time.
      *
      * @param object $object The domain object to persist.
      * @return this
      * @throws Core\OGMException
+     * @throws Core\InvalidClassException
      */
 	public function persist($object){
 
@@ -146,121 +162,120 @@ class UnitOfWork {
 			throw new OGMException('You are not allowed to persist something that is not an object.');
 		}
 
-		// first we get the meta object, this operation will also check that the object provided
-		// can be persisted eg. has the correct annotations; from now on we will work only with 
-		// meta objects for better consistency and type-checking;s
-		$metaObject = $this->getMetaObject($object);
-		$hash = $this->getObjectHash($metaObject);
-
-		// if the object is already managed do nothing
-		if( $this->isManaged($metaObject) ){
-			return ;
+		if( $object instanceof Collection ){
+			$this->persistCollection($object);
 		}
 
-		// if the object is scheduled to be removed from the db
-		// delete it from scheduler and proceed with adding it again to managed objects
-		if( $this->hasBeenRemoved($metaObject) ){
-			$this->removedObjects->remove($hash);
-		}
-	
-		$this->managedObjects->set($hash, $metaObject);
+		$meta = $this->getClassMetadata(get_class($object));
+		$hash = $this->getHash($object);
+		$this->managed->set($hash, $object);
+
 		return $this;
 
 	}
 
-	// TODO:
-	public function persistCollection(){
-		// If the object persisted is iterable then we loop over all
-		// domain objects inside the collection and add them to managed objects;
-		// the managed domain objects contains only meta objects for better
-		// encapsulation, consistency and type check
-		if($object instanceof Collection){
-			
-			$collection = $object;
-			foreach ($collection as $value) {
-
-				$meta = $this->getMetaObject($value);
-				$this->managedObjects->set(spl_object_hash($meta), $meta);
-				
-			}
-
-			return $this;
-		}
-	}
-
 	/**
-	 * Checks whether the domain object is being managed by this unit of work; make sure
-	 * to first get the meta object using getMetaObject();
+	 * Persist a collection as part of the current unit of work.
 	 *
-	 * @return boolean
+	 * @param Core\Collection
+	 * @return this
 	 */
-	public function isManaged($object){
+	public function persistCollection($collection){
 
-		$hash = $this->getObjectHash($object);
-		if( $this->managedObjects->get($hash) ){
-			return true;
+		if( ! $object instanceof Collection ){
+			throw new OGMException('You are allowed to persist only collections that extend Core\Collection');
 		}
 
-		return false;
+		foreach ($collection as $object) {
+			$this->persist($object);
+		}
+
+		return $this;
 
 	}
 
 	/**
-	 * Checks whether the domain object provided is scheduled to be removed.
-	 *
-	 * @return boolean
-	 */
-	public function hasBeenRemoved($object){
-
-		$hash = $this->getObjectHash($object);
-		if( $this->removedObjects->get($hash) ){
-			return true;
-		}
-
-		return false;
-
-	}
-
-	protected function getObjectHash($object){
-
-		// If we passed a meta object then the hash is the wrapped object's hash
-		if($object instanceof MetaObject){
-			$hash = $object->getHash();
-		}else{
-			$hash = spl_object_hash($object);
-		}
-
-		return $hash;
-
-	}
-
-	/**
-	 * Gets the meta object from a domain object.
+	 * Finds the state of a given domain object; CLEAN, NEW, DIRTY, REMOVED
 	 * 
-	 * @param DomainObject | Proxy\ValueHolder
-	 * @return Meta\MetaObject
+	 * @param DomainObject
+	 * @return ObjectState
 	 */
-	public function getMetaObject($object){
+	public function getDomainObjectState($object){
 
-		if( ! is_object($object) ){
-			throw new OGMException('You cannot get the meta object for something that is not an object.');
+		$meta = $this->getClassMetadata($object);
+			
+		// Value Objects are always NEW - they will always be merged
+		if($meta instanceof MetaNodeValueObject){
+			return ObjectState::STATE_NEW;
 		}
 
-		// if the object provided is already instance of MetaObject return it
-		if( $object instanceof MetaObject ){
-			return $object;
-		}
+		// NEW - if not proxy -> not pulled from DB which means the client created the object
+		return ObjectState::STATE_NEW;
 
-		$meta = $this->metaFactory->getMetaClassFor($object);
-		return $meta;
+		// DIRTY - if proxy -> update properties + merge only relationships with value objects
+
+		// REMOVED - if present in the removed collection
 
 	}
 
-	public function getMapper($object){
+	/**
+     * @param DomainObject $object
+     * @return string
+     */
+	private function getHash($object){
 
-		$meta = $this->getMetaObject($object);
-		$namespace = $meta->getMapperNamespace();
+		return spl_object_hash($object);
 
+	}
+
+	/**
+	 * Gets the metadata for the provided $class (namespace)
+	 * and validates against the annotations required.
+	 *
+	 * @param string
+	 * @return Meta\MetaObject
+	 * @throws Core\InvalidClassException
+	 */	
+	public function getClassMetadata($class){
+
+		return $this->metadataFactory->getMetadataFor($class);
+
+	}
+
+	/**
+	 * Gets the repository for the provided class namespace or object.
+	 *
+	 * @param string | DomainObject
+	 * @return Repositories\AbstractRepository
+	 * @throws Core\InvalidClassException
+	 */	
+	public function getRepository($class){
+
+		// if we pass an object instead of the namespace of the class
+		if( is_object($class) ){
+			$class = get_class($class);
+		}
+
+		$namespace = $this->getClassMetadata($class)->getRepositoryNamespace();
+		return new $namespace($this);
+
+	}
+
+	/**
+	 * Gets the mapper for the provided class namespace or object.
+	 *
+	 * @param string | DomainObject
+	 * @return Mapping\AbstractRepository
+	 * @throws Core\InvalidClassException
+	 */	
+	public function getMapper($class){
+
+		// if we pass an object instead of the namespace of the class
+		if( is_object($class) ){
+			$class = get_class($class);
+		}
+
+		$namespace = $this->getClassMetadata($class)->getMapperNamespace();
 		return new $namespace($this);
 
 	}

@@ -1,10 +1,6 @@
 <?php 
 namespace Mapping;
-use Meta\NodeValueObject as NodeValueObjectMeta;
 
-/**
- * @author Cezar Grigore <tuck2226@gmail.com>
- */
 class NodeValueObjectMapper extends NodeMapper{
 
 	protected function load($properties){
@@ -13,41 +9,63 @@ class NodeValueObjectMapper extends NodeMapper{
 		
 	}
 
-	public function insert(NodeValueObjectMeta $object){
+	public function match($object, $name = 'value'){
+		
+		$meta = $this->getUnitOfWork()->getClassMetadata($object);
+		
+		// Getting the match properties and map the annotations and values to a [key, property] array
+		$annotations = $meta->getMatchProperties();
+		$values = $meta->getMatchProperties($object);
+		$matchProperties = [];
+		foreach ($values as $propertyName => $value) {
+			$matchProperties[$annotations[$propertyName]->key] = $value;
+			settype($matchProperties[$annotations[$propertyName]->key], $annotations[$propertyName]->type);
+		}
 
-		$statement = $this->getStatementForMerge($object);
-		$this->addNodeStatement($statement[0], $statement[1]);
-		// dd('ola');
-	}
+		// Gets the labels defined by metadata
+		$labels = $meta->getLabels();
 
-	/**
-	 * 
-	 * @return [query, params]
-	 */
-	public function getStatementForMerge(NodeValueObjectMeta $object){
-
-		$class = $object->getClass();
-		
-		/**
-		 * get labels and the node properties as values defined by metadata;
-		 * the node properties are the properties on the object with Annotations\GraphProperty
-		 */
-		$labels = $object->getLabels();
-		$labels = $this->mapLabelsToCypher($labels);
-		
-		
-		$matchProperties = $object->getMatchProperties();
-		$properties = array_merge($object->getProperties(), 
-			[ 'created_at' => 'Some time', '_class' => $class ]);
-		$params = $properties;
-		
-		$matchProperties = $this->mapPropertiesToCypherForMatch($matchProperties);
-		$properties = $this->mapPropertiesToCypher($properties);
-		
-		$query = "MERGE (value:{$labels} {{$matchProperties}}) ON CREATE SET {$properties}";
+		// Start mapping to cypher
+		$labelsCypher = $this->mapLabelsArrayToCypher($labels);
+		list($cypherMatch, $params) = $this->mapPropertiesArrayToCypherAndToUniqueParamsForMatch($matchProperties);
+		$query = "MATCH ($name:{$labelsCypher} { {$cypherMatch} })";
 		
 		return [$query, $params];
+
+	}
+
+	public function insert($object){
+
+		$meta = $this->getUnitOfWork()->getClassMetadata($object);
+		$class = $meta->getClass();
+
+		// Gets the labels defined by metadata
+		$labels = $meta->getLabels();
 		
+		// Gets properties for the node, (key, value) and also attach _class and created_at
+		$properties = $this->getNodeProperties($object);
+		$properties = array_merge($properties, [ 'created_at' => 'todo', '_class' => $class ]);
+
+		// Getting the match properties and map the annotations and values to a [key, property] array
+		$annotations = $meta->getMatchProperties();
+		$values = $meta->getMatchProperties($object);
+		$matchProperties = [];
+		foreach ($values as $propertyName => $value) {
+			$matchProperties[$annotations[$propertyName]->key] = $value;
+			settype($matchProperties[$annotations[$propertyName]->key], $annotations[$propertyName]->type);
+		}
+
+		// Start mapping to cypher
+		$labelsCypher = $this->mapLabelsArrayToCypher($labels);
+		$propertiesCypher = $this->mapPropertiesArrayToCypher($properties);
+		$matchPropertiesCypher = $this->mapPropertiesArrayToCypherForMatch($matchProperties);
+
+		// building the query
+		$query = "MERGE (value:{$labelsCypher} {{$matchPropertiesCypher}}) ON CREATE SET {$propertiesCypher}";
+		$this->addNodeStatement($query, $properties);
+
+		$this->mergeAllRelationships($object);
+
 	}
 
 }

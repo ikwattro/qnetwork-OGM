@@ -10,10 +10,8 @@ use Annotations\GraphProperty;
 /** 
  * @Node(labels = {"User"})
  * @GraphEntity
- * 
- * @author Cezar Grigore <grigorecezar@gmail.com>
  */
-class User {
+class User extends Entity{
 	
 	/**
 	 * @RelateTo(type = "HAS_USERNAME")

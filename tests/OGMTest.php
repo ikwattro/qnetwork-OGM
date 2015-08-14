@@ -18,7 +18,7 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 		\Kint::enabled(true);
 		
 		$reflector = new ReflectionClass(new AnnotationReader(), new AnnotationRegistry());
-		$this->unitOfWork = new UnitOfWork2(
+		$this->unitOfWork = new UnitOfWork(
 			new NeoClient(), new MetadataFactory($reflector)
 			);
 

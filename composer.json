@@ -19,7 +19,8 @@
 	   "neoxygen/neoclient": "~2.1",
 	   "fzaninotto/Faker": "1.*",
        "raveren/kint": "^1.0",
-       "doctrine/common": "~2.5"
+       "doctrine/common": "~2.5",
+       "ramsey/uuid": "2.*"
     },
     "autoload": {
         "classmap": [

@@ -80,6 +80,59 @@ class ReflectionClass implements Reflector{
 
 	}
 
+	public function getPropertiesWithAnnotation($class, $annotation){
+
+		$reflector = $this->getReflector($class);
+		$properties = $reflector->getProperties();
+
+		$annotations = [];
+		foreach ($properties as $reflectionProperty) {
+			
+			$annotationObject = $this->getReader()->getPropertyAnnotation($reflectionProperty, $annotation);
+
+			if($annotationObject != null){
+				$annotationObject->propertyName = $reflectionProperty->name;
+				$annotations[] = $annotationObject;
+			}
+
+		}
+
+		return $annotations;
+
+	}
+
+	public function getObjectPropertyValue($object, $property){
+
+		$reader = function & ($object, $property) {
+
+			$value = & \Closure::bind(function & () use ($property) {
+				
+				return $this->$property;
+
+			}, $object, $object)->__invoke();
+
+			return $value;
+
+		};
+
+		$value = & $reader($object, $property);
+
+		return $value;
+
+	}
+
+	public function setPropertyValueForObject($object, $property, $value){
+
+		$reflector = $this->getReflector(get_class($object));
+        
+        $property = $reflector->getProperty($property);
+        $property->setAccessible(true);
+        $property->setValue($object, $value);
+
+        return $this;
+
+	}
+
 	protected function registerAnnotations(){
 
 		$path = dirname(__FILE__);

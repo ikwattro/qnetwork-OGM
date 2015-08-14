@@ -1,19 +1,13 @@
 <?php 
 namespace Mapping;
-use Core\MetaObject;
 use Core\OGMException;
-use Proxy\ValueHolder;
-use Proxy\Proxy;
-use Core\Collection;
-use Meta\Node as NodeMetaObject;
 use Core\ObjectState;
 
-/**
- * @author Cezar Grigore <tuck2226@gmail.com>
- */
-class NodeMapper extends AbstractMapper{
+abstract class NodeMapper extends AbstractMapper{
 
 	use CypherTrait, NodeFinder;
+
+	abstract public function match($object, $name = 'value');
 
 	/**
 	 * Takes an array of (key, value) pairs representing the node's properties
@@ -82,6 +76,31 @@ class NodeMapper extends AbstractMapper{
 
 	}
 
+	public function mergeAllRelationships($object){
+
+		$meta = $this->getUnitOfWork()->getClassMetadata($object);
+		$annotations = $meta->getAssociations();
+		$values = $meta->getAssociations($object);
+		
+		foreach ($values as $propertyName => $value) {
+			
+			$annotation = $annotations[$propertyName];
+			if( is_array($value) || $value instanceof \Traversable ){
+				
+				foreach ($value as $collectionValue) {
+					$this->mergeRelationship($object, $collectionValue, $annotation->type, $annotation->direction);
+				}
+				// dd($this->getUnitOfWork()->getManager());
+				continue;
+
+			}
+
+			$this->mergeRelationship($object, $value, $annotation->type, $annotation->direction);
+
+		}
+
+	}
+
 	/**
 	 * Merges a relationship between 2 nodes $from and $to
 	 *
@@ -90,10 +109,10 @@ class NodeMapper extends AbstractMapper{
 	 * @param string the type of the relationship
 	 * @return void
 	 */
-	protected function mergeRelationship($from, $to, $type){
-
-		list($matchFrom, $paramsFrom) = $this->match($from, 'from');
-		list($matchTo, $paramsTo) = $this->match($to, 'to');
+	protected function mergeRelationship($from, $to, $type, $direction){
+		
+		list($matchFrom, $paramsFrom) = $this->getUnitOfWork()->getMapper($from)->match($from, 'from');
+		list($matchTo, $paramsTo) = $this->getUnitOfWork()->getMapper($to)->match($to, 'to');
 
 		$params = array_merge($paramsFrom, $paramsTo);
 
@@ -103,51 +122,6 @@ class NodeMapper extends AbstractMapper{
 		$this->addRelationshipStatement($query, $params);
 
 	}
-
-	public function updateRelationships(NodeMetaObject $object){
-
-		$associations = $object->getAssociations();
-
-		foreach ($associations as $value) {
-			
-			// If the association is a collection, loop throw all objects in collection
-			// get the statements and continue to next value
-			if($value instanceof Collection){
-				dd($value);
-				$collection = $value;
-				foreach ($collection as $collectionObject) {
-
-					$statement = $this->getMergeRelationshipStatement($collectionObject);
-					$this->addRelationshipStatement($statement[0], $statement[1]);
-
-				}
-				continue;
-
-			}
-
-			$statement = $this->getMergeRelationshipStatement($value);
-			$this->addRelationshipStatement($statement[0], $statement[1]);
-
-		}
-
-	}
-
-	public function getMergeRelationshipStatement(NodeMetaObject $from, NodeMetaObject $to){
-		dd($object);
-		// if the value attached is a proxy do nothing as the relationship already exists
-		if($value instanceof Proxy){
-			return null;
-		}
-
-		// if it is not a Proxy and the object is an entity
-		// then it is a new value and we insert the relationship
-
-		// if it is not a Proxy and the object is a value object
-		// then we merge the relationship	
-
-	}
-
-	
 
 	/**
 	 * Deletes the $type relationship between 2 nodes $from and $to .
@@ -180,52 +154,22 @@ class NodeMapper extends AbstractMapper{
 
 	}
 
-	/**
-	 * Creates the statement that sets the node properties for a specific object that is defined as Node.
-	 * If it is a NEW entity then we CREATE the entity, set the _class property and created_at;
-	 * If it is a DIRTY entity then we just MATCH and SET and updated_at;
-	 *
-	 * @param Meta\Node
-	 * @return void
-	 */
-	protected function getStatementForSettingNodeProperties(NodeMetaObject $object){
+	protected function getNodeProperties($object){
 
-		$class = $object->getClass();
+		$meta = $this->getUnitOfWork()->getClassMetadata($object);
 		
-		/**
-		 * get labels and the node properties as values defined by metadata;
-		 * the node properties are the properties on the object with Annotations\GraphProperty
-		 */
-		$labels = $object->getLabels();
-		$labels = $this->mapLabelsToCypher($labels);
-		$properties = $object->getProperties();
+		// Gets all properties annotations (GraphProperty annotation) and their values present on object
+		$annotations = $meta->getProperties();
+		$values = $meta->getProperties($object);
 
-		/**
-		 * Define params as merged properties and created date / update date
-		 */
-		switch( $object->getState() ){
-			case ObjectState::STATE_NEW:
-			$params = [ 'created_at' => 'todo', '_class' => $class ];
-			$params = array_merge($properties, $params);
-			$properties = $this->mapPropertiesToCypher($params);
-
-			$query = "CREATE (value:{$labels}) SET {$properties}";
-			break;
-
-			case ObjectState::STATE_DIRTY;
-			$params = [ 'updated_at' => 'todo' ];
-			$params = array_merge($properties, $params);
-			$properties = $this->mapPropertiesToCypher($params);
-
-			$query = "MATCH (value:{$labels} { id: {id} }) SET {$properties}";
-			break;
-
-			default:
-			throw new OGMException('You are trying to set the node properties but the state provided is invalid.');
-			break;
+		// map the annotations and values to a [key, property] array for Nodes
+		$properties = [];
+		foreach ($values as $propertyName => $value) {
+			$properties[$annotations[$propertyName]->key] = $value;
+			settype($properties[$annotations[$propertyName]->key], $annotations[$propertyName]->type);
 		}
-
-		return [$query, $params];
+		
+		return $properties;
 
 	}
 

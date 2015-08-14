@@ -9,22 +9,27 @@ use Doctrine\Common\Annotations\Annotation;
 class RelateTo extends OGMAnnotation{
 	
 	/**
-	 * The relationship type present in Neo4j.
+	 * The relationship type.
 	 *
 	 * @var string
 	 */
 	public $type = null;
 
 	/**
-	 * The direction of the relationship in Neo4j.
+	 * The direction of the relationship.
 	 */
 	public $direction = null;
 	
 	/**
-	 * Eager loads this property.
+	 * Tells the OGM if this should be instantiated as a collection;
 	 *
 	 * @var boolean
 	 */
 	public $collection = false;
+
+	/**
+	 * The objects property name; this is used by the reflector
+	 */
+	public $propertyName = null;
 	
 }

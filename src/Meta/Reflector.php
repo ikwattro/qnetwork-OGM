@@ -14,4 +14,31 @@ interface Reflector{
 	 */
 	public function getClassAnnotation($class, $annotation);
 
+	/**
+	 * Gets all properties of $class that have $annotation.
+	 * @param string full class namespace
+	 * @param string full annotation namespace
+	 * @return OGMAnnotation | null returns the specific annotation or null if class doesn't have $annotation
+	 */
+	public function getPropertiesWithAnnotation($class, $annotation);
+
+	/**
+	 * Gets the value that the object provided holds for the property provided.
+	 * 
+	 * @param DomainObject The object that we need to find the property value for
+	 * @param string The property name present on the object
+	 * @return DomainObject | Collection
+	 */
+	public function getObjectPropertyValue($object, $propertyName);
+
+	/**
+	 * Sets property for a specific object.
+	 *
+	 * @param object 
+	 * @param string property that should be changed
+	 * @param string the value that the property should take
+	 * @return this
+	 */
+	public function setPropertyValueForObject($object, $property, $value);
+
 }

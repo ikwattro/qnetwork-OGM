@@ -2,9 +2,6 @@
 namespace Mapping;
 use Core\UnitOfWork;
 
-/**
- * @author Cezar Grigore <tuck2226@gmail.com>
- */
 abstract class AbstractMapper {
 
 	/**

@@ -40,4 +40,35 @@ class NodeValueObject extends Node{
 
 	}
 
+
+	/**
+	 * Loops through all properties on this class and finds the GraphProperties with match=true annotation.
+	 * If object is present then the real values that the object holds will be returned;
+	 *
+	 * @param DomainObject | null
+	 */
+	public function getMatchProperties($object = null){
+
+		$annotations = $this->getProperties();
+		$matchAnnotations = [];
+		foreach ($annotations as $value) {
+			if($value->match){
+				$matchAnnotations[$value->propertyName] = $value;
+			}
+		}
+
+		if($object === null){
+			return $matchAnnotations;
+		}
+		
+		$properties = $this->getProperties($object);
+		$values = [];
+		foreach ($matchAnnotations as $propertyName => $value) {
+			$values[$propertyName] = $properties[$propertyName];
+		}
+
+		return $values;
+
+	}
+
 }
