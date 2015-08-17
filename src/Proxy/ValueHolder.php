@@ -8,10 +8,17 @@ namespace Proxy;
  */
 class ValueHolder implements Proxy{
 
-    protected $class = null;
 	protected $wrapped = null;
 
-    public function __construct($wrapped) {
+    protected $associatedObject = null;
+
+    protected $annotation = null;
+
+    protected $statement = null;
+
+    protected $finder = null;
+
+    public function __construct($wrapped = null) {
 
         $this->wrapped = $wrapped;
 
@@ -25,15 +32,42 @@ class ValueHolder implements Proxy{
      * @return void
      */
     public function __load(){
+        
+        if( ! $this->__isInitialized() ){
+            
+            if($this->finder === null){
+                throw new OGMException('The finder has to be set for every proxy not initialized.');
+            }
 
-        if($this->wrapped === null){
-            // TODO: logic for pulling the wrapped object
-            /*$unitOfWork = \App::make('QNetwork\Infrastructure\OGM\Core\UnitOfWork');
-            $mapper = $unitOfWork->getMapper('QNetwork\Domain\EmailAddress');
-            $this->wrapper = $mapper->getSingle($this->statement[0], $this->statement[1]);*/
+            $this->wrapped = $this->finder->getSingle($this->statement[0], $this->statement[1]);
+            
         }
-
+        
         return $this->wrapped;
+
+    }
+
+    public function __setFinder($finder){
+
+        $this->finder = $finder;
+
+    }
+
+    public function __setAssociatedObject($object){
+
+        $this->associatedObject = $object;
+
+    }
+
+    public function __setAnnotation($annotation){
+
+        $this->annotation = $annotation;
+
+    }
+
+    public function __setStatementToGetValue($statement){
+
+        $this->statement = $statement;
 
     }
 

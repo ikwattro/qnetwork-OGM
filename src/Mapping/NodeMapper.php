@@ -2,77 +2,37 @@
 namespace Mapping;
 use Core\OGMException;
 use Core\ObjectState;
+use Core\LazyCollection;
+use Meta\NodeEntity as MetaNodeEntity;
 
 abstract class NodeMapper extends AbstractMapper{
 
-	use CypherTrait, NodeFinder;
-
+	/**
+	 * Takes an object and returns the matching cypher query;
+	 * The second parameter $name represents the name of the matching entity in cypher;
+	 * 
+	 * @param DomainObject
+	 * @param string
+	 * @return string The match cypher query
+	 */
 	abstract public function match($object, $name = 'value');
 
-	/**
-	 * Takes an array of (key, value) pairs representing the node's properties
-	 * and tranforms it into a single domain object without any related entities.
-	 *
-	 * This method uses the _class property on the node to create the object needed.
-	 * No logic involving cleaning the object, checking the identity map or checking
-	 * if the class assigned to this mapper is the one in _class. All this logic 
-	 * should be present in the abstract method load() that will be implemented by sub-classes.
-	 *
-	 * This way we will be able to use the doLoad method in the same mapper for other domain objects,
-	 * this way making the eager loading and polymorphic relationships easier to implement.
-	 *
-	 * @param array(key, value) An array of parameters for creating the object. The _class parameter should be present.
-	 * @return DomainObject
-	 */
-	public function doLoad($properties){
+	protected function getNodeProperties($object){
+
+		$meta = $this->getUnitOfWork()->getClassMetadata($object);
 		
-		if( ! isset($properties['_class']) ){
-			throw new OGMException('The node provided does not have the property _class and the domain object cannot be instantiated.');
-		}
+		// Gets all properties annotations (GraphProperty annotation) and their values present on object
+		$annotations = $meta->getProperties();
+		$values = $meta->getProperties($object);
 
-		/**
-		 * We will be creating a new instance of our domain object without using the constructor
-		 * and we will be using reflection to set the required properties.
-		 */
-		$class = $properties['_class'];
-		$instance = NodeReflector::newInstanceWithoutConstructor($class);
-		
-		$graphProperties = NodeReflector::getGraphProperties($class);
-		foreach ($graphProperties as $property) {
-			
-			if( isset($properties[$property->key]) ){
-
-				$propertyValue = $properties[$property->key];
-				if($property->reference){
-					$reference = $property->reference;
-					$propertyValue = new $reference($propertyValue);
-				}
-
-				NodeReflector::setPropertyValueForObject($instance, $property->propertyName, $propertyValue);
-			}
-
+		// map the annotations and values to a [key, property] array for Nodes
+		$properties = [];
+		foreach ($values as $propertyName => $value) {
+			$properties[$annotations[$propertyName]->key] = $value;
+			settype($properties[$annotations[$propertyName]->key], $annotations[$propertyName]->type);
 		}
 		
-		$associations = NodeReflector::getAssociations($class);
-		foreach ($associations as $value) {
-			
-			if($value->collection){
-				$statement = $this->match($instance);
-				$statement[0] .= "-[:{$value->type}]->(result) RETURN result SKIP 0 LIMIT 100";
-
-				$proxy = new Collection($statement);
-			}else{
-				$statement = $this->match($instance);
-				$statement[0] .= "-[:{$value->type}]->(result) RETURN result";
-				
-				$proxy = new ValueHolder($statement);
-			}
-			
-			NodeReflector::setPropertyValueForObject($instance, $value->propertyName, $proxy);
-
-		}
-		
-		return $instance;
+		return $properties;
 
 	}
 
@@ -90,7 +50,7 @@ abstract class NodeMapper extends AbstractMapper{
 				foreach ($value as $collectionValue) {
 					$this->mergeRelationship($object, $collectionValue, $annotation->type, $annotation->direction);
 				}
-				// dd($this->getUnitOfWork()->getManager());
+				
 				continue;
 
 			}
@@ -151,25 +111,6 @@ abstract class NodeMapper extends AbstractMapper{
 		}
 
 		$this->addRelationshipStatement($query, $params);
-
-	}
-
-	protected function getNodeProperties($object){
-
-		$meta = $this->getUnitOfWork()->getClassMetadata($object);
-		
-		// Gets all properties annotations (GraphProperty annotation) and their values present on object
-		$annotations = $meta->getProperties();
-		$values = $meta->getProperties($object);
-
-		// map the annotations and values to a [key, property] array for Nodes
-		$properties = [];
-		foreach ($values as $propertyName => $value) {
-			$properties[$annotations[$propertyName]->key] = $value;
-			settype($properties[$annotations[$propertyName]->key], $annotations[$propertyName]->type);
-		}
-		
-		return $properties;
 
 	}
 

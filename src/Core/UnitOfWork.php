@@ -3,6 +3,7 @@ namespace Core;
 use Meta\MetadataFactory;
 use Meta\NodeValueObject as MetaNodeValueObject;
 use Meta\NodeEntity as MetaNodeEntity;
+use Mapping\NodeFinder;
 
 class UnitOfWork {
 
@@ -106,7 +107,7 @@ class UnitOfWork {
 	}
 
 	private function cascadeManage($object, Collection $managed){
-
+		
 		if( ! is_object($object) || $object instanceof \Traversable){
 			throw new OGMException('You cannot cascade manage something that is not an object, or a traversable object.');
 		}
@@ -257,7 +258,7 @@ class UnitOfWork {
 		}
 
 		$namespace = $this->getClassMetadata($class)->getRepositoryNamespace();
-		return new $namespace($this);
+		return new $namespace($this, $class);
 
 	}
 
@@ -277,6 +278,12 @@ class UnitOfWork {
 
 		$namespace = $this->getClassMetadata($class)->getMapperNamespace();
 		return new $namespace($this);
+
+	}
+
+	public function getNodeFinder(){
+
+		return new NodeFinder($this);
 
 	}
 

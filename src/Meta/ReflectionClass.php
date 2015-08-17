@@ -66,7 +66,7 @@ class ReflectionClass implements Reflector{
 		if( isset($reflectors[$class]) ){
 			return $reflectors[$class];
 		}
-
+		
 		$reflector = new PHPReflectionClass($class);
 		$reflectors[$class] = $reflector;
 
@@ -130,6 +130,12 @@ class ReflectionClass implements Reflector{
         $property->setValue($object, $value);
 
         return $this;
+
+	}
+
+	public function newInstanceWithoutConstructor($class){
+
+		return $this->getReflector($class)->newInstanceWithoutConstructor();
 
 	}
 

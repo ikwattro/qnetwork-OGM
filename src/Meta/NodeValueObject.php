@@ -19,7 +19,7 @@ class NodeValueObject extends Node{
 			return $repository->namespace;
 		}
 
-		return 'Repositories\NodeValueObjectRepository';
+		return 'Repositories\NodeRepository';
 
 	}
 

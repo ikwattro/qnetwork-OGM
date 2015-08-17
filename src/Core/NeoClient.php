@@ -46,6 +46,18 @@ class NeoClient implements TransactionalManager{
 
 	}
 
+	public function getResultSet($query, $params){
+		
+		$client = ClientBuilder::create()
+			->addConnection('default','http','localhost', 7474, true, 'neo4j', '123123')
+				->setDefaultTimeout(180)
+				->setAutoFormatResponse(true)
+				->build();
+
+		return $client->sendCypherQuery($query, $params)->getResult();
+
+	}
+
 	public function clear(){
 
 		echo 'transactional manager clear';

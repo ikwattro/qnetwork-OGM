@@ -21,7 +21,7 @@ class NodeEntity extends Node{
 			return $repository->namespace;
 		}
 
-		return 'Repositories\NodeEntityRepository';
+		return 'Repositories\NodeRepository';
 
 	}
 
@@ -42,11 +42,15 @@ class NodeEntity extends Node{
 
 	}
 
-	public function setId($object){
-
+	public function setId($object, $uuid = null){
+		
 		$id = $this->getId($object);
 		if($id === null){
 			$id = new Uuid();
+		}
+		
+		if($uuid !== null){
+			$id = $uuid;
 		}
 		
 		$annotation = $this->getId();

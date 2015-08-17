@@ -10,8 +10,6 @@ use Annotations\GraphProperty;
 /**
  * @Node(labels={"WebDomainAddress"})
  * @GraphValueObject
- *
- * @author Cezar Grigore <grigorecezar@gmail.com>
  */
 class Domain{
 

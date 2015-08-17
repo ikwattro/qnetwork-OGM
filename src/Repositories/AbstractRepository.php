@@ -1,30 +1,26 @@
 <?php 
-namespace QNetwork\Infrastructure\OGM\Repositories;
-use QNetwork\Infrastructure\OGM\Core\UnitOfWork;
-use QNetwork\Infrastructure\OGM\Reflection\Reflector;
+namespace Repositories;
+use Core\UnitOfWork;
+use Mapping\CypherTrait;
 
-/**
- * @author Cezar Grigore <grigorecezar@gmail.com>
- */
 abstract class AbstractRepository {
 
+	use CypherTrait;
+
 	/**
-	 * @var QNetwork\Infrastructure\OGM\Core\UnitOfWork
+	 * @var Core\UnitOfWork
 	 */
 	protected $unitOfWork = null;
 
 	/**
-	 * The class name that this repository is being created for.
-	 * eg. QNetwork\Domain\User, QNetwork\Domain\EmailAddress
-	 *
-	 * @var string
+	 * The meta class for this repository, extracted from the class that has been passed
 	 */
-	protected $class;
+	protected $meta = null;
 
 	public function __construct(UnitOfWork $unitOfWork, $class){
 
 		$this->unitOfWork = $unitOfWork;
-		$this->class = $class;
+		$this->meta = $this->unitOfWork->getClassMetadata($class);
 
 	}
 
@@ -34,23 +30,10 @@ abstract class AbstractRepository {
 
 	}
 
-	public function add($object){
+	public function getMeta(){
 
-		// TODO: check if the object passed has all the required annotations
-		$this->getUnitOfWork()->persist($object);
-
-		return $this;
-
+		return $this->meta;
+		
 	}
-
-	public function remove($object){
-
-		// TODO: check if the object passed has all the required annotations
-		$this->getUnitOfWork()->remove($object);
-
-		return $this;
-
-	}
-
 
 }

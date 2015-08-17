@@ -41,4 +41,12 @@ interface Reflector{
 	 */
 	public function setPropertyValueForObject($object, $property, $value);
 
+	/**
+	 * Instantiate any class without using the constructor.
+	 *
+	 * @param string The class that should be instantiated
+	 * @return object
+	 */
+	public function newInstanceWithoutConstructor($class);
+
 }

@@ -4,6 +4,8 @@ use Core\UnitOfWork;
 
 abstract class AbstractMapper {
 
+	use CypherTrait;
+
 	/**
 	 * @var Core\UnitOfWork
 	 */
@@ -60,10 +62,9 @@ abstract class AbstractMapper {
 	 * @param array
 	 * @return ResultSet
 	 */
-	public function getResults($query, $params){
-
-		$client = Client::create();
-		return $client->sendCypherQuery($query, $params)->getResult();
+	public function getResultSet($query, $params){
+		
+		return $this->getUnitOfWork()->getManager()->getResultSet($query, $params);
 		
 	}
 

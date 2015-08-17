@@ -1,41 +1,30 @@
 <?php 
-namespace QNetwork\Infrastructure\OGM\Repositories;
-use QNetwork\Infrastructure\OGM\Reflection\NodeReflector;
-use QNetwork\Infrastructure\OGM\Core\UnitOfWork;
+namespace Repositories;
+use Meta\NodeEntity as MetaNodeEntity;
+use Core\OGMException;
 
 class NodeRepository extends AbstractRepository{
-
-	public function __construct(UnitOfWork $unitOfWork, $class){
-
-		parent::__construct($unitOfWork, $class);
-
-	}
-
-	protected function getLabelsQuery(){
-
-		$labels = NodeReflector::getLabels($this->class);
-
-		$class = $this->class;
-		$mapper = $class::getMapper();
-		$query = $mapper->mapLabelsToCypher($labels);
-
-		return $query;
-
-	}
 
 	/**
 	 * This method is applicable only to entities
 	 */
 	public function findById($id){
 
+		$meta = $this->getMeta();
+		$class = $meta->getClass();
+
+		if( ! $meta instanceof MetaNodeEntity ){
+			throw new OGMException('You cannot get by id for something that is not an entity.');
+		}
+
+		// Gets the labels defined by metadata
+		$labels = $meta->getLabels();
+		$labelsCypher = $this->mapLabelsArrayToCypher($labels);
+
 		$params = [ 'id' => (string) $id ];
-		$labels = $this->getLabelsQuery();
-		$query = "MATCH (u:{$labels} { id: {id} }) RETURN u";
-
-		$class = $this->class;
-		$mapper = $class::getMapper();
-
-		return $mapper->getSingle($query, $params);
+		$query = "MATCH (node:{$labelsCypher} { id: {id} }) RETURN node";
+		
+		return $this->getUnitOfWork()->getNodeFinder($class)->getSingle($query, $params);
 
 	}
 

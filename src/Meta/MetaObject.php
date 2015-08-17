@@ -71,4 +71,15 @@ abstract class MetaObject {
 
 	}
 
+	/**
+	 * Instantiate any class without using the constructor.
+	 *
+	 * @return object
+	 */
+	public function newInstanceWithoutConstructor(){
+
+        return $this->getReflector()->newInstanceWithoutConstructor( $this->getClass() );
+
+	}
+
 }

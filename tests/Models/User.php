@@ -74,4 +74,10 @@ class User extends Entity{
 
 	}
 
+	public function getPerson(){
+
+		return $this->person;
+		
+	}
+	
 }

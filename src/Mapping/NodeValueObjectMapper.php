@@ -3,12 +3,6 @@ namespace Mapping;
 
 class NodeValueObjectMapper extends NodeMapper{
 
-	protected function load($properties){
-		
-		return $this->doLoad( $properties );
-		
-	}
-
 	public function match($object, $name = 'value'){
 		
 		$meta = $this->getUnitOfWork()->getClassMetadata($object);

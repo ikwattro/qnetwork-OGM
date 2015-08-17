@@ -11,8 +11,6 @@ use Annotations\GraphProperty;
 /**
  * @Node(labels={"EmailAddress"})
  * @GraphValueObject
- *
- * @author Cezar Grigore <grigorecezar@gmail.com>
  */
 class EmailAddress{
 

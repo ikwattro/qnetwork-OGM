@@ -30,6 +30,7 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 
 	public function testCase1(){
 		
+		// TODO: NOT WORKING !!!
 		$person = new Person('John Smith');
 		$person->addEmail(new EmailAddress('john.smith@gmail.com'))
 			->addEmail(new EmailAddress('j.smith@mydomain.io'));
@@ -59,6 +60,17 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 		
 		$this->unitOfWork->persist($user);
 		$this->unitOfWork->commit();
+
+	}
+
+	public function testCase3(){
+
+		$rep = $this->unitOfWork->getRepository(User::class);
+		$user = $rep->findById('4e1a71b8-c1eb-432f-9173-2554c446926c');
+
+		$email = (string) $user->getUsername()->getDomain();
+		$person = $user->getPerson();
+		echo $person->getOrganization()->getName();
 
 	}
 

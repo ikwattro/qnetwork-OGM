@@ -40,6 +40,12 @@ class Organization extends Entity{
 
 	}
 
+	public function getName(){
+
+		return $this->name;
+		
+	}
+
 	public function addEmail(EmailAddress $email){
 
 		$this->emails[] = $email;

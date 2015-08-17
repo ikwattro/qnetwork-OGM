@@ -54,4 +54,10 @@ class Person extends Entity{
 		
 	}
 
+	public function getOrganization(){
+
+		return $this->organization;
+		
+	}
+
 }

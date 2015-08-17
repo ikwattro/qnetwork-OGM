@@ -1,70 +1,144 @@
 <?php 
 namespace Mapping;
+use Meta\NodeEntity as MetaNodeEntity;
 
-trait NodeFinder {
+class NodeFinder extends AbstractMapper{
+
 	/**
-	 * This mapping function returns a single domain object
-	 * that is represented by a node in the database.
-	 * All the domain objects attached to this one will be represented as proxies
+	 * Takes an array of properties and loads the domain object.
+	 * The array should has to contain _class otherwise an exception will be thrown;
+	 * For entities the array should contain an id an this will be checked against the identity map;
+	 *
+	 * @param array
+	 */
+	public function load($properties){
+
+		$object = $this->doLoad( $properties );
+		return $object;
+		$fromMap = $this->getUnitOfWork()->getIdentityMap()->retrieveByEntityId( $entity->getId() );
+		if($fromMap){
+			return $fromMap;
+		}
+
+		$this->getUnitOfWork()->clean($entity);
+		return $entity;
+
+	}
+
+	/**
+	 * Takes an array of (key, value) pairs representing the node's properties
+	 * and tranforms it into a single domain object with all associated domain objects as proxies.
+	 *
+	 * This method uses the _class property on the node to create the object needed.
+	 * No logic involving cleaning the object, checking the identity map or checking
+	 * if the class assigned to this mapper is the one in _class. All this logic 
+	 * should be present in the abstract method load() that will be implemented by sub-classes.
+	 *
+	 * This way we will be able to use the doLoad method in the same mapper for other domain objects,
+	 * this way making the eager loading and polymorphic relationships easier to implement.
+	 *
+	 * @param array(key, value) An array of parameters for creating the object. The _class parameter should be present.
+	 * @return DomainObject
+	 */
+	protected function doLoad($properties){
+		
+		if( ! isset($properties['_class']) ){
+			throw new OGMException('You cannot load a domain object using an array of properties that does not has the _class property.');
+		}
+
+		/**
+		 * We will be creating a new instance of our domain object without using the constructor
+		 * and we will be using reflection to set the required properties.
+		 */
+		$class = $properties['_class'];
+		$meta = $this->getUnitOfWork()->getClassMetadata($class);
+
+		$instance = $meta->newInstanceWithoutConstructor();
+		
+		$annotations = $meta->getProperties();
+		foreach ($annotations as $annotation) {
+			
+			// If the annotation property is present on the $properties array passed
+			$key = $annotation->key;
+			if( isset($properties[$key]) ){
+				
+				// instantiate object is value object as property
+				$propertyValue = $properties[$key];
+				if($annotation->reference){
+					$reference = $annotation->reference;
+					$propertyValue = new $reference($propertyValue);
+				}
+				
+				$meta->getReflector()->setPropertyValueForObject($instance, $annotation->propertyName, $propertyValue);
+
+			}
+
+		}
+		
+		if($meta instanceof MetaNodeEntity){
+			$meta->setId($instance, $properties[$meta->getId()->propertyName]);
+		}
+		
+		$associations = $meta->getAssociations();
+		foreach ($associations as $value) {
+			
+			if($value->collection){
+
+				$proxy = new \Core\LazyCollection();
+				$statement = $this->getUnitOfWork()->getMapper($meta->getClass())->match($instance);
+				$statement[0] .= "-[:{$value->type}]->(result) RETURN result SKIP 0 LIMIT 100";
+
+				$proxy->__setAssociatedObject($instance);
+				$proxy->__setAnnotation($value);
+				$proxy->__setStatementToGetValue($statement);
+				$proxy->__setFinder($this);
+
+			}else{
+				
+				$proxy = new \Proxy\ValueHolder();
+				$statement = $this->getUnitOfWork()->getMapper($meta->getClass())->match($instance);
+				$statement[0] .= "-[:{$value->type}]->(result) RETURN result";
+				
+				$proxy->__setAssociatedObject($instance);
+				$proxy->__setAnnotation($value);
+				$proxy->__setStatementToGetValue($statement);
+				$proxy->__setFinder($this);
+
+			}
+			
+			$meta->getReflector()->setPropertyValueForObject($instance, $value->propertyName, $proxy);
+		
+		}
+		
+		return $instance;
+
+	}
+
+	/**
+	 * This mapping function returns a single domain object that is represented by a node in the database.
+	 * All the domain objects attached to this one will be represented as proxies.
 	 *
 	 * @param string The query that will be run
 	 * @param params The params that are being passed to the query
 	 * @return DomainObject
 	 */
 	public function getSingle($query, $params = []){
-
-		$results = $this->getResults($query, $params);
+		
+		$resultSet = $this->getResultSet($query, $params);
 		
 		/**
 		 * If the result set is empty, return null
 		 */
-		if( ! count($results->getNodes()) ){
+		if( ! count($resultSet->getNodes()) ){
 			return null;
 		}
 
-		if( count($results->getNodes()) > 1){
+		if( count($resultSet->getNodes()) > 1){
 			throw new OGMException('The provided query is invalid. query: ' . $query);
 		}
 
-		return $this->load( $results->getSingleNode()->getProperties() );
+		return $this->load( $resultSet->getSingleNode()->getProperties() );
 
 	}
 
-
-	public function match($object, $name = "value"){
-
-		/**
-		 * Loops through $object meta and detects which graph properties
-		 * are being used for the match (id for Entity and merging properties for ValueObject)
-		 */
-		$params = NodeReflector::getMatchPropertiesAsValues($object);
-		$labels = NodeReflector::getLabels($object);
-
-		$labels = $this->mapLabelsToCypher( $labels );
-		// $matchProperties = $this->mapPropertiesToCypherForMatch( $params, $name, true );
-		list($matchProperties, $params) = $this->mapPropertiesTEST($params);
-		$query = "MATCH ($name:{$labels} {{$matchProperties}})";
-		
-		return [$query, $params];
-
-	}
-
-	protected function mapPropertiesTEST($properties){
-
-		$cypher = '';
-		$newParams = [];
-
-		foreach ($properties as $property => $value) {
-			
-			$key = uniqid() . '_' . $property; 
-			$newParams[$key] = $value;
-
-			$cypher .= "$property: {" . $key ."},";
-
-		}
-		
-		$cypher = rtrim($cypher, ",");
-		return [$cypher, $newParams];
-
-	}
 }

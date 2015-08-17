@@ -1,24 +1,11 @@
 <?php 
 namespace Mapping;
+use Core\OGMException;
 use Meta\NodeEntity as NodeEntityMeta;
 use Core\Uuid;
 
 class NodeEntityMapper extends NodeMapper{
-
-	/*public function load($properties){
-		
-		$entity = $this->doLoad( $properties );
-		
-		$fromMap = $this->getUnitOfWork()->getIdentityMap()->retrieveByEntityId( $entity->getId() );
-		if($fromMap){
-			return $fromMap;
-		}
-
-		$this->getUnitOfWork()->clean($entity);
-		return $entity;
-
-	}*/
-
+	
 	public function match($object, $name = 'value'){
 		
 		$meta = $this->getUnitOfWork()->getClassMetadata($object);
