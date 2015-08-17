@@ -1,5 +1,6 @@
 {
-    "name": "qnetwork/OGM",
+    "name": "romulus/ogm",
+    "version": "1.0.0",
     "description": "Object-to-Graph mapping system.",
     "license": "MIT",
     "keywords": ["neo4j"],
