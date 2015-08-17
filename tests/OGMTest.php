@@ -74,6 +74,16 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 
 	}
 
+	public function testCase4(){
+
+		$rep = $this->unitOfWork->getRepository(User::class);
+		$user = $rep->findByProperty('username', 'j.smith@mydomain.io');
+
+		$person = $user->getPerson()->setName('ollla ollla this works !');
+		$this->unitOfWork->commit();
+
+	}
+
 	public function testOGM(){
 
 	}

@@ -14,14 +14,21 @@ class NodeFinder extends AbstractMapper{
 	public function load($properties){
 
 		$object = $this->doLoad( $properties );
-		return $object;
-		$fromMap = $this->getUnitOfWork()->getIdentityMap()->retrieveByEntityId( $entity->getId() );
-		if($fromMap){
-			return $fromMap;
-		}
+		$meta = $this->getUnitOfWork()->getClassMetadata($object);
 
-		$this->getUnitOfWork()->clean($entity);
-		return $entity;
+		if($meta instanceof MetaNodeEntity){
+
+			$id = $meta->getId($object);
+			$fromMap = $this->getUnitOfWork()->getIdentityMap()->get($id);
+			if($fromMap){
+				return $fromMap;
+			}
+
+			$this->getUnitOfWork()->clean($object);
+
+		}
+		
+		return $object;
 
 	}
 

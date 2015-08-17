@@ -30,16 +30,17 @@ class NodeRepository extends AbstractRepository{
 
 	public function findByProperty($key, $value){
 
-		$labels = $this->getLabelsQuery();
+		$meta = $this->getMeta();
+		$class = $meta->getClass();
+		
+		// Gets the labels defined by metadata
+		$labels = $meta->getLabels();
+		$labelsCypher = $this->mapLabelsArrayToCypher($labels);
 
 		$params = [ 'paramKey' => $value ];
-		$query = "MATCH (value:{$labels} { {$key}: {paramKey} }) RETURN value";
+		$query = "MATCH (value:{$labelsCypher} { {$key}: {paramKey} }) RETURN value";
 		
-		$class = $this->class;
-		$mapper = $class::getMapper();
-		
-		$object = $mapper->findSingle($query, $params);
-		return $object;
+		return $this->getUnitOfWork()->getNodeFinder($class)->getSingle($query, $params);
 
 	}
 

@@ -47,7 +47,7 @@ class User extends Entity{
 		$this->password = $password;
 
 	}
-
+	
 	public function getUsername(){
 
 		return $this->username;

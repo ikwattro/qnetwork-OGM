@@ -1,6 +1,7 @@
 <?php 
 namespace Meta;
 use Core\InvalidClassException;
+use Proxy\Proxy;
 
 class MetadataFactory {
 
@@ -37,8 +38,7 @@ class MetadataFactory {
 			return $this->metas[$class];
 		}
 
-		// TODO: handle proxies
-		if($class instanceof Proxy){}
+		$meta = null;
 		
 		$reflector = $this->reflector;
 

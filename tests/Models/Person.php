@@ -40,6 +40,13 @@ class Person extends Entity{
 
 	}
 
+	public function setName($name){
+		
+		$this->name = $name;
+		return $this;
+
+	}
+	
 	public function addEmail(EmailAddress $email){
 
 		$this->emails[] = $email;

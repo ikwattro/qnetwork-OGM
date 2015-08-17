@@ -4,6 +4,7 @@ use Meta\MetadataFactory;
 use Meta\NodeValueObject as MetaNodeValueObject;
 use Meta\NodeEntity as MetaNodeEntity;
 use Mapping\NodeFinder;
+use Proxy\Proxy;
 
 class UnitOfWork {
 
@@ -62,6 +63,12 @@ class UnitOfWork {
 	public function getManager(){
 
 		return $this->manager;
+
+	}
+
+	public function getIdentityMap(){
+
+		return $this->identityMap;
 
 	}
 
@@ -210,6 +217,7 @@ class UnitOfWork {
 			return ObjectState::STATE_NEW;
 		}
 
+		dd($object);
 		// NEW - if not proxy -> not pulled from DB which means the client created the object
 		return ObjectState::STATE_NEW;
 
@@ -229,6 +237,17 @@ class UnitOfWork {
 
 	}
 
+	public function clean($entity){
+
+		$meta = $this->getClassMetadata($entity);
+		$id = $meta->getId($entity);
+
+		$this->identityMap->set($id, $entity);
+		$this->persist($entity);
+
+		return $this;
+
+	}
 	/**
 	 * Gets the metadata for the provided $class (namespace)
 	 * and validates against the annotations required.
