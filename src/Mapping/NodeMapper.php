@@ -46,17 +46,27 @@ abstract class NodeMapper extends AbstractMapper{
 		foreach ($values as $propertyName => $value) {
 
 			$annotation = $annotations[$propertyName];
-			// If $value instanceof LazyCollection then any elements removed have to be detached from the 
-			// node at the database level; basically delete the relationship
-
 			
+			// we should accept only Doctrine/ArrayCollection as collections
 			if( is_array($value) || $value instanceof \Traversable ){
 				
+				// If $value instanceof LazyCollection then any elements removed have to be detached from the 
+				// node at the database level; basically delete the relationship
+				if($value instanceof LazyCollection){
+					foreach ($value->getRemovedObjects() as $collectionValue) {
+						$this->deleteRelationship($object, $collectionValue, $annotation->type, $annotation->direction);
+					}
+				}
+
 				foreach ($value as $collectionValue) {
+
 					if( $collectionValue instanceof Proxy && ! $collectionValue->isProxyInitialized() ){
 						continue;
 					}
+					// before merging any relationship check if any of the objects is value object
+					// or any of them new; if none of this cases merge is not necessary
 					$this->mergeRelationship($object, $collectionValue, $annotation->type, $annotation->direction);
+
 				}
 				
 				continue;
@@ -110,15 +120,15 @@ abstract class NodeMapper extends AbstractMapper{
 	 * @param string the type of the relationship
 	 * @return void
 	 */
-	protected function deleteRelationship($from, $type, $to = null){
-
-		list($query, $params) = $this->match($from, 'from');
+	protected function deleteRelationship($from, $to = null, $type, $direction){
+		
+		list($matchFrom, $paramsFrom) = $this->getUnitOfWork()->getMapper($from)->match($from, 'from');
 		
 		if( $to ){
 
-			list($toQuery, $toParams) = $this->match($to, 'to');
-			$query .= ' ' . $toQuery;
-			$params = array_merge($params, $toParams);
+			list($matchTo, $paramsTo) = $this->getUnitOfWork()->getMapper($to)->match($to, 'to');
+			$query  = $matchFrom . ' ' . $matchTo;
+			$params = array_merge($paramsFrom, $paramsTo);
 
 			$query .= " MATCH (from)-[r:{$type}]->(to) DELETE r";
 		}

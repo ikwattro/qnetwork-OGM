@@ -2,6 +2,7 @@
 namespace Mapping;
 use Meta\NodeEntity as MetaNodeEntity;
 use Proxy\ProxyFactory;
+use Core\Collection;
 
 class NodeFinder extends AbstractMapper{
 
@@ -95,7 +96,7 @@ class NodeFinder extends AbstractMapper{
 
 				$proxy = new \Core\LazyCollection();
 				$statement = $this->getUnitOfWork()->getMapper($meta->getClass())->match($instance);
-				$statement[0] .= "-[:{$value->type}]->(result) RETURN result SKIP 0 LIMIT 100";
+				$statement[0] .= "-[:{$value->type}]->(result) RETURN result ";
 
 				$proxy->__setAssociatedObject($instance);
 				$proxy->__setAnnotation($value);
@@ -153,6 +154,34 @@ class NodeFinder extends AbstractMapper{
 		}
 
 		return $this->load( $resultSet->getSingleNode()->getProperties() );
+
+	}
+
+	/**
+	 * This mapping function returns a single domain object that is represented by a node in the database.
+	 * All the domain objects attached to this one will be represented as proxies.
+	 *
+	 * @param string The query that will be run
+	 * @param params The params that are being passed to the query
+	 * @return DomainObject
+	 */
+	public function getCollection($query, $params = []){
+
+		$resultSet = $this->getResultSet($query, $params);
+		
+		/**
+		 * If the result set is empty, return null
+		 */
+		if( ! count($resultSet->getNodes()) ){
+			return null;
+		}
+
+		$collection = new Collection();
+		foreach ($resultSet->getNodes() as $node) {
+			$collection->add( $this->load($node->getProperties()) );
+		}
+
+		return $collection;
 
 	}
 

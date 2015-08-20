@@ -55,7 +55,7 @@ class Person extends Entity{
 	
 	public function addEmail(EmailAddress $email){
 
-		$this->emails[] = $email;
+		$this->emails->add($email);
 		return $this;
 
 	}
@@ -63,7 +63,13 @@ class Person extends Entity{
 	public function getEmails(){
 
 		return $this->emails;
-		
+
+	}
+
+	public function removeEmail(EmailAddress $email){
+
+		$this->emails->removeElement($email);
+
 	}
 
 	public function worksFor(Organization $organization){

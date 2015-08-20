@@ -113,9 +113,8 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 
 		$rep = $this->unitOfWork->getRepository(Person::class);
 		$person = $rep->findByProperty('name', 'Test 1');
-		$person->addEmail(new EmailAddress('test@domain.com'));
+		$person->removeEmail(new EmailAddress('test@domain.com'));
 		$emails = $person->getEmails();
-		// dd($emails);
 
 		$this->unitOfWork->commit();
 
