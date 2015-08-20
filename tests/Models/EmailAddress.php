@@ -17,12 +17,12 @@ class EmailAddress{
 	/**
 	 * @GraphProperty(type = "string", key = "email", match = true)
 	 */
-	private $email = null;
+	protected $email = null;
 	
 	/**
-	 * @RelateTo(type = "ON_DOMAIN")
+	 * @RelateTo(type = "ON_DOMAIN", reference = "Models\Domain")
 	 */
-	private $domain = null;
+	protected $domain = null;
 
 	public function __construct($email){
 

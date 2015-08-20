@@ -35,7 +35,7 @@ class NodeValueObjectMapper extends NodeMapper{
 
 		// Gets the labels defined by metadata
 		$labels = $meta->getLabels();
-		
+
 		// Gets properties for the node, (key, value) and also attach _class and created_at
 		$properties = $this->getNodeProperties($object);
 		$properties = array_merge($properties, [ 'created_at' => 'todo', '_class' => $class ]);
@@ -57,9 +57,9 @@ class NodeValueObjectMapper extends NodeMapper{
 		// building the query
 		$query = "MERGE (value:{$labelsCypher} {{$matchPropertiesCypher}}) ON CREATE SET {$propertiesCypher}";
 		$this->addNodeStatement($query, $properties);
-
+		
 		$this->mergeAllRelationships($object);
-
+		
 	}
 
 }

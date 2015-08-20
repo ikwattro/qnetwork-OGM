@@ -4,6 +4,7 @@ use Core\OGMException;
 use Core\ObjectState;
 use Core\LazyCollection;
 use Meta\NodeEntity as MetaNodeEntity;
+use ProxyManager\Proxy\LazyLoadingInterface as Proxy;
 
 abstract class NodeMapper extends AbstractMapper{
 
@@ -39,20 +40,35 @@ abstract class NodeMapper extends AbstractMapper{
 	public function mergeAllRelationships($object){
 
 		$meta = $this->getUnitOfWork()->getClassMetadata($object);
+
 		$annotations = $meta->getAssociations();
 		$values = $meta->getAssociations($object);
-		
 		foreach ($values as $propertyName => $value) {
-			
+
 			$annotation = $annotations[$propertyName];
+			// If $value instanceof LazyCollection then any elements removed have to be detached from the 
+			// node at the database level; basically delete the relationship
+
+			
 			if( is_array($value) || $value instanceof \Traversable ){
 				
 				foreach ($value as $collectionValue) {
+					if( $collectionValue instanceof Proxy && ! $collectionValue->isProxyInitialized() ){
+						continue;
+					}
 					$this->mergeRelationship($object, $collectionValue, $annotation->type, $annotation->direction);
 				}
 				
 				continue;
 
+			}
+
+			if($value === null){
+				continue;
+			}
+
+			if( $value instanceof Proxy && ! $value->isProxyInitialized() ){
+				continue;
 			}
 
 			$this->mergeRelationship($object, $value, $annotation->type, $annotation->direction);
@@ -71,6 +87,7 @@ abstract class NodeMapper extends AbstractMapper{
 	 */
 	protected function mergeRelationship($from, $to, $type, $direction){
 		
+		// TODO: merge if and only if one of $from or $to is NEW or one of $from or $to is value object
 		list($matchFrom, $paramsFrom) = $this->getUnitOfWork()->getMapper($from)->match($from, 'from');
 		list($matchTo, $paramsTo) = $this->getUnitOfWork()->getMapper($to)->match($to, 'to');
 

@@ -8,7 +8,7 @@ use Annotations\RelateTo;
 use Annotations\GraphProperty;
 
 /**
- * @Node(labels={"WebDomainAddress"})
+ * @Node(labels={"Domain"})
  * @GraphValueObject
  */
 class Domain{
@@ -35,7 +35,7 @@ class Domain{
 
 	}
 
-	public function equals(WebDomainAddress $domain){
+	public function equals(Domain $domain){
 
 		return (string) $this === (string) $domain;
 		

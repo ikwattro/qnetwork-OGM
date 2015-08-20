@@ -1,6 +1,7 @@
 <?php 
 namespace Meta;
 use Core\OGMException;
+use ProxyManager\Proxy\LazyLoadingInterface as Proxy;
 
 abstract class Node extends MetaObject{
 
@@ -30,15 +31,13 @@ abstract class Node extends MetaObject{
 			return $values;
 		}
 
-		// if an object is provided, we first check if it is the same class
-		// as the one stored and if so we loop through all annotations and return the values
-		// hold by the object
-		if( $this->getClass() !== get_class($object) ){
-			throw new OGMException('Invalid object provided for getting the associations; the meta object class is different then the class that the object provided belongs to.');
+		if( $object instanceof Proxy ){
+			$object = $object->getWrappedValueHolderValue();			
 		}
 
 		foreach ($annotations as $annotation) {
-			$values[$annotation->propertyName] = $reflector->getObjectPropertyValue($object, $annotation->propertyName);
+			$value = $reflector->getObjectPropertyValue($object, $annotation->propertyName);
+			$values[$annotation->propertyName] = $value;
 		}
 
 		return $values;

@@ -1,6 +1,7 @@
 <?php 
 namespace Mapping;
 use Meta\NodeEntity as MetaNodeEntity;
+use Proxy\ProxyFactory;
 
 class NodeFinder extends AbstractMapper{
 
@@ -87,6 +88,7 @@ class NodeFinder extends AbstractMapper{
 		}
 		
 		$associations = $meta->getAssociations();
+		
 		foreach ($associations as $value) {
 			
 			if($value->collection){
@@ -101,20 +103,26 @@ class NodeFinder extends AbstractMapper{
 				$proxy->__setFinder($this);
 
 			}else{
-				
-				$proxy = new \Proxy\ValueHolder();
-				$statement = $this->getUnitOfWork()->getMapper($meta->getClass())->match($instance);
-				$statement[0] .= "-[:{$value->type}]->(result) RETURN result";
-				
-				$proxy->__setAssociatedObject($instance);
-				$proxy->__setAnnotation($value);
-				$proxy->__setStatementToGetValue($statement);
-				$proxy->__setFinder($this);
 
+				$proxyFactory = new ProxyFactory();
+				$initializer = 
+					function (& $wrappedObject, $proxy, $method, $parameters, & $initializer) use($meta, $instance, $value){
+						
+						// instantiation logic here
+						$statement = $this->getUnitOfWork()->getMapper($meta->getClass())->match($instance);
+						$statement[0] .= "-[:{$value->type}]->(result) RETURN result";
+    					$wrappedObject = $this->getSingle($statement[0], $statement[1]);
+    					
+						// turning off further lazy initialization
+        				$initializer   = null; 
+    				};
+    			
+				$proxy = $proxyFactory->createFromDomainObject($value->reference, $initializer);
+				
 			}
 			
 			$meta->getReflector()->setPropertyValueForObject($instance, $value->propertyName, $proxy);
-		
+			
 		}
 		
 		return $instance;
@@ -130,7 +138,7 @@ class NodeFinder extends AbstractMapper{
 	 * @return DomainObject
 	 */
 	public function getSingle($query, $params = []){
-		
+
 		$resultSet = $this->getResultSet($query, $params);
 		
 		/**

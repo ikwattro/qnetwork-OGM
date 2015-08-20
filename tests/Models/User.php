@@ -14,14 +14,14 @@ use Annotations\GraphProperty;
 class User extends Entity{
 	
 	/**
-	 * @RelateTo(type = "HAS_USERNAME")
+	 * @RelateTo(type = "HAS_USERNAME", reference = "Models\EmailAddress")
 	 * @GraphProperty(type = "string", key = "username")
 	 * @var Models\EmailAddress
 	 */
 	protected $username = null;
 
 	/**
-	 * @RelateTo(type = "HAS_SESSION", collection = true)
+	 * @RelateTo(type = "HAS_SESSION", collection = true, reference = "Models\UserSession")
 	 *
 	 * @var Models\UserSession
 	 */
@@ -35,7 +35,7 @@ class User extends Entity{
 	protected $password = null; 
 
 	/**
-	 * @RelateTo(type = "IS_A")
+	 * @RelateTo(type = "IS_A", reference = "Models\Person")
 	 *
 	 * @var Models\Person
 	 */
@@ -57,6 +57,12 @@ class User extends Entity{
 	public function getPassword(){
 
 		return $this->password;
+		
+	}
+
+	public function getSessions(){
+
+		return $this->sessions;
 		
 	}
 

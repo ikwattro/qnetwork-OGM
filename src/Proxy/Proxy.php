@@ -1,8 +1,9 @@
 <?php 
 namespace Proxy;
 use Doctrine\Common\Proxy\Proxy as DoctrineProxy;
+use ProxyManager\Proxy\LazyLoadingInterface;
 
-interface Proxy {
+interface Proxy extends LazyLoadingInterface{
 
 	/**
      * Initializes this proxy if its not yet initialized.

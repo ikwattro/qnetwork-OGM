@@ -54,40 +54,42 @@ class NodeEntityMapper extends NodeMapper{
 		
 		/**
 		 * Clean the entity - add it to identity map
-		 * and keep a clone of this original for future updates
+		 * and (keep a clone of this original for future updates?)
 		 */
-		// $this->getUnitOfWork()->clean($entity);
+		$this->getUnitOfWork()->clean($object);
 
 	}
 
-	public function update($entity){
-		// TODO
+	public function update($object){
+
+		$meta = $this->getUnitOfWork()->getClassMetadata($object);
+		$class = $meta->getClass();
+
+		// Generate Uuid and set it on the property that has @Id annotation
+		$id = $meta->getId($object);
+		$key = $meta->getId()->propertyName;
+
+		// Gets the labels defined by metadata
+		$labels = $meta->getLabels();
+		// Gets properties for the node, (key, value) and also attach _class and created_at
+		$properties = $this->getNodeProperties($object);
+		$properties = array_merge($properties, [ $key => (string) $id, 'updated_at' => 'todo', '_class' => $class ]);
+
+		// Start mapping to cypher
+		$labelsCypher = $this->mapLabelsArrayToCypher($labels);
+		$propertiesCypher = $this->mapPropertiesArrayToCypher($properties);
+
+		// building the query and sending the statement
+		$query = "MATCH (value:{$labelsCypher} {id: {{$key}} }) SET {$propertiesCypher}";
+		$this->addNodeStatement($query, $properties);
+
+		$this->mergeAllRelationships($object);
+		
 		/**
-		 * Define params as merged properties and created date / update date
+		 * Clean the entity - add it to identity map
+		 * and (keep a clone of this original for future updates?)
 		 */
-		switch( $object->getState() ){
-			case ObjectState::STATE_NEW:
-			$params = [ 'created_at' => 'todo', '_class' => $class ];
-			$params = array_merge($properties, $params);
-			$properties = $this->mapPropertiesToCypher($params);
-
-			$query = "CREATE (value:{$labels}) SET {$properties}";
-			break;
-
-			case ObjectState::STATE_DIRTY;
-			$params = [ 'updated_at' => 'todo' ];
-			$params = array_merge($properties, $params);
-			$properties = $this->mapPropertiesToCypher($params);
-
-			$query = "MATCH (value:{$labels} { id: {id} }) SET {$properties}";
-			break;
-
-			default:
-			throw new OGMException('You are trying to set the node properties but the state provided is invalid.');
-			break;
-		}
-
-		return [$query, $params];
+		$this->getUnitOfWork()->clean($object);
 		
 	}
 

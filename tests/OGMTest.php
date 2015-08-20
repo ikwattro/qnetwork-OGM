@@ -14,12 +14,15 @@ use Core\NeoClient;
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Meta\ReflectionClass;
+use Core\Collection;
 
 class OGMTest extends \PHPUnit_Framework_TestCase {
 
 	public function setUp(){
 
 		\Kint::enabled(true);
+
+		$this->faker = \Faker\Factory::create();
 		
 		$reflector = new ReflectionClass(new AnnotationReader(), new AnnotationRegistry());
 		$this->unitOfWork = new UnitOfWork(
@@ -78,13 +81,43 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 
 		$rep = $this->unitOfWork->getRepository(User::class);
 		$user = $rep->findByProperty('username', 'j.smith@mydomain.io');
+		$person = $user->getPerson();
+		$person->getName();
+		$username = (string) $user->getUsername();
 
-		$person = $user->getPerson()->setName('ollla ollla this works !');
+		$newuser = new User(new EmailAddress('test@domain.com'), new Password('olalala'));
+		$this->unitOfWork->persist($newuser);
 		$this->unitOfWork->commit();
 
 	}
 
-	public function testOGM(){
+	public function testCase5(){
+
+		$person = new Person($this->faker->name);
+		$this->unitOfWork->persist($person);
+
+		$collection = new Collection();
+		for($i = 1; $i <= 100; $i++) {
+			
+			$email = new EmailAddress($this->faker->email);
+			$collection->add($email);
+			$person->addEmail($email);
+
+		}
+		
+		$this->unitOfWork->commit();
+		
+	}
+
+	public function testCase6(){
+
+		$rep = $this->unitOfWork->getRepository(Person::class);
+		$person = $rep->findByProperty('name', 'Test 1');
+		$person->addEmail(new EmailAddress('test@domain.com'));
+		$emails = $person->getEmails();
+		// dd($emails);
+
+		$this->unitOfWork->commit();
 
 	}
 

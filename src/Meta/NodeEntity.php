@@ -82,9 +82,9 @@ class NodeEntity extends Node{
 		// if an object is provided, we first check if it is the same class
 		// as the one stored and if so we loop through all annotations and return the values
 		// hold by the object
-		if( $this->getClass() !== get_class($object) ){
+		/*if( $this->getClass() !== get_class($object) ){
 			throw new OGMException('Invalid object provided for getting the Id; the meta object class is different then the class that the object provided belongs to.');
-		}
+		}*/
 		
 		return $reflector->getObjectPropertyValue($object, $annotation->propertyName);
 

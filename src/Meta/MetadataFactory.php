@@ -30,10 +30,6 @@ class MetadataFactory {
 	 */
 	public function getMetadataFor($class){
 
-		if( is_object($class) ){
-			$class = get_class($class);
-		}
-		
 		if( isset($this->metas[$class]) ){
 			return $this->metas[$class];
 		}

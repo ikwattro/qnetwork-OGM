@@ -28,6 +28,13 @@ class RelateTo extends OGMAnnotation{
 	public $collection = false;
 
 	/**
+	 * To which object in the oop model does this object relate to.
+	 *
+	 * @var string
+	 */
+	public $reference = null;
+
+	/**
 	 * The objects property name; this is used by the reflector
 	 */
 	public $propertyName = null;

@@ -4,7 +4,7 @@ use Meta\MetadataFactory;
 use Meta\NodeValueObject as MetaNodeValueObject;
 use Meta\NodeEntity as MetaNodeEntity;
 use Mapping\NodeFinder;
-use Proxy\Proxy;
+use ProxyManager\Proxy\LazyLoadingInterface as Proxy;
 
 class UnitOfWork {
 
@@ -73,7 +73,7 @@ class UnitOfWork {
 	}
 
 	public function commit(){
-
+		
 		$allManaged = new Collection();
 		foreach ($this->managed as $hash => $object) {
 			$this->cascadeManage($object, $allManaged);
@@ -81,16 +81,21 @@ class UnitOfWork {
 
 		// update the managed objects to allManaged
 		$this->managed = $allManaged;
-
+		
 		foreach ($this->managed as $object) {
 			
 			$state = $this->getDomainObjectState($object);
 			switch ($state) {
 				case ObjectState::STATE_NEW:
+					// if entity, set auto generated id
+					$meta = $this->getClassMetadata($object);
+					$this->generateIdForEntity($object, $meta);	
+
 					$this->getMapper($object)->insert($object);
 					break;
 				
 				case ObjectState::STATE_DIRTY:
+					// Update the state if entity DIRTY
 					$this->getMapper($object)->update($object);
 					break;
 
@@ -99,7 +104,7 @@ class UnitOfWork {
 					break;
 
 				case ObjectState::STATE_REMOVED:
-					$this->getMapper($object)->delete($object);
+					// $this->getMapper($object)->delete($object);
 					break;
 
 				default:
@@ -108,25 +113,32 @@ class UnitOfWork {
 			}
 
 		}
-
+		
+		// dd($this->getManager());
 		$this->getManager()->flush();
 
 	}
 
 	private function cascadeManage($object, Collection $managed){
 		
+		if($object === null){
+			return ;
+		}
+
 		if( ! is_object($object) || $object instanceof \Traversable){
 			throw new OGMException('You cannot cascade manage something that is not an object, or a traversable object.');
 		}
+		
+		if( $object instanceof Proxy && ! $object->isProxyInitialized() ){
+			return ;
+		}
 
-		$this->generateIdForEntity($object);
+		$meta = $this->getClassMetadata($object);
 
 		$hash = $this->getHash($object);
 		$managed->set($hash, $object);
-
-		$meta = $this->getClassMetadata($object);
+		
 		$associations = $meta->getAssociations($object);
-
 		foreach ($associations as $association) {
 			
 			if( is_array($association) || $association instanceof \Traversable ){
@@ -144,9 +156,8 @@ class UnitOfWork {
 
 	}
 
-	private function generateIdForEntity($object){
+	private function generateIdForEntity($object, $meta){
 
-		$meta = $this->getClassMetadata($object);
 		if($meta instanceof MetaNodeEntity){
 			$meta->setId($object);
 		}
@@ -174,7 +185,16 @@ class UnitOfWork {
 			$this->persistCollection($object);
 		}
 
-		$meta = $this->getClassMetadata(get_class($object));
+		if( $object instanceof Proxy && ! $object->__isInitialized() ){
+			throw new OGMException('You cannot persist a proxy that is not initialized.');
+		}
+
+		$class = get_class($object);
+		if( $object instanceof Proxy && $object->__isInitialized() ){
+			$class = get_class($object->__load());
+		}
+
+		$meta = $this->getClassMetadata($class);
 		$hash = $this->getHash($object);
 		$this->managed->set($hash, $object);
 
@@ -211,19 +231,28 @@ class UnitOfWork {
 	public function getDomainObjectState($object){
 
 		$meta = $this->getClassMetadata($object);
+
+		// TODO: REMOVED - if present in the removed collection
+		$hash = $this->getHash($object);
+		if( $this->removed->get($hash) ){
+			return ObjectState::STATE_REMOVED;
+		}
 			
 		// Value Objects are always NEW - they will always be merged
 		if($meta instanceof MetaNodeValueObject){
 			return ObjectState::STATE_NEW;
 		}
+		// if not then it is entity
+		$entity = $object;
 
-		dd($object);
+		// DIRTY - if present in identity map, we update everything -> update properties + merge only relationships with value objects
+		$id = $meta->getId($entity);
+		if( $this->getIdentityMap()->get($id) ){
+			return ObjectState::STATE_DIRTY;
+		}
+		
 		// NEW - if not proxy -> not pulled from DB which means the client created the object
 		return ObjectState::STATE_NEW;
-
-		// DIRTY - if proxy -> update properties + merge only relationships with value objects
-
-		// REMOVED - if present in the removed collection
 
 	}
 
@@ -233,14 +262,19 @@ class UnitOfWork {
      */
 	private function getHash($object){
 
-		return spl_object_hash($object);
+		$hash = spl_object_hash($object);
+		if($object instanceof Proxy){
+			$hash = spl_object_hash($object->getWrappedValueHolderValue());
+		}
+	
+		return $hash;
 
 	}
 
 	public function clean($entity){
 
 		$meta = $this->getClassMetadata($entity);
-		$id = $meta->getId($entity);
+		$id = (string) $meta->getId($entity);
 
 		$this->identityMap->set($id, $entity);
 		$this->persist($entity);
@@ -256,7 +290,23 @@ class UnitOfWork {
 	 * @return Meta\MetaObject
 	 * @throws Core\InvalidClassException
 	 */	
-	public function getClassMetadata($class){
+	public function getClassMetadata($object){
+
+		if( is_string($object) ){
+			$class = $object;
+		}
+
+		if( is_object($object) ){
+			$class = get_class($object);
+		}
+
+		if($object instanceof Proxy){
+			$class = get_parent_class($object);
+		}
+
+		if($object === null){
+			dd($object);
+		}
 
 		return $this->metadataFactory->getMetadataFor($class);
 
@@ -288,14 +338,9 @@ class UnitOfWork {
 	 * @return Mapping\AbstractRepository
 	 * @throws Core\InvalidClassException
 	 */	
-	public function getMapper($class){
-
-		// if we pass an object instead of the namespace of the class
-		if( is_object($class) ){
-			$class = get_class($class);
-		}
-
-		$namespace = $this->getClassMetadata($class)->getMapperNamespace();
+	public function getMapper($object){
+		if($object === null){dd('ola');}
+		$namespace = $this->getClassMetadata($object)->getMapperNamespace();
 		return new $namespace($this);
 
 	}

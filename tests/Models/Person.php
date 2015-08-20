@@ -14,7 +14,7 @@ use Annotations\GraphProperty;
 class Person extends Entity{
 
 	/**
-	 * @RelateTo(type = "HAS_EMAIL", collection = true)
+	 * @RelateTo(type = "HAS_EMAIL", collection = true, reference = "Models\EmailAddress")
 	 *
 	 * @var Models\EmailAddress
 	 */
@@ -28,7 +28,7 @@ class Person extends Entity{
 	protected $name = null; 
 
 	/**
-	 * @RelateTo(type = "WORKS_FOR")
+	 * @RelateTo(type = "WORKS_FOR", reference = "Models\Organization")
 	 *
 	 * @var Models\Organization
 	 */
@@ -46,12 +46,24 @@ class Person extends Entity{
 		return $this;
 
 	}
+
+	public function getName(){
+
+		return $this->name;
+		
+	}
 	
 	public function addEmail(EmailAddress $email){
 
 		$this->emails[] = $email;
 		return $this;
 
+	}
+
+	public function getEmails(){
+
+		return $this->emails;
+		
 	}
 
 	public function worksFor(Organization $organization){

@@ -1,5 +1,6 @@
 <?php 
 namespace Meta;
+use ProxyManager\Proxy\LazyLoadingInterface as Proxy;
 
 abstract class MetaObject {
 
@@ -56,11 +57,8 @@ abstract class MetaObject {
 
 		}
 
-		// if an object is provided, we first check if it is the same class
-		// as the one stored and if so we loop through all annotations and return the values
-		// hold by the object
-		if( $this->getClass() !== get_class($object) ){
-			throw new OGMException('Invalid object provided for getting the associations; the meta object class is different then the class that the object provided belongs to.');
+		if( $object instanceof Proxy ){
+			$object = $object->getWrappedValueHolderValue();			
 		}
 
 		foreach ($annotations as $annotation) {
