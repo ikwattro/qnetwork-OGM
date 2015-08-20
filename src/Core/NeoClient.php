@@ -21,24 +21,24 @@ class NeoClient implements TransactionalManager{
 	 */
 	protected $relationshipStatements = [];
 
-	public function flush(){
-
-		$statements = array_merge($this->getNodeStatements(), $this->getRelationshipStatements());
+	public function __construct(){
 		
-		$client = ClientBuilder::create()
-			->addConnection('default','http','localhost', 7474, true, 'neo4j', '123123')
+		$this->client = ClientBuilder::create()
+				->addConnection('default','http','localhost', 7474, true, 'neo4j', '123123')
 				->setDefaultTimeout(180)
 				->setAutoFormatResponse(true)
 				->build();
-	
+
+	}
+
+	public function flush(){
+
+		$statements = array_merge($this->getNodeStatements(), $this->getRelationshipStatements());
+		$client = $this->client;
 		try {
-
 			$client->sendMultiple($statements);
-
 		}catch(\Exception $e){
-			
 			throw $e;
-			
 		}
 
 		$this->nodeStatements = [];
@@ -48,13 +48,7 @@ class NeoClient implements TransactionalManager{
 
 	public function getResultSet($query, $params){
 		
-		$client = ClientBuilder::create()
-			->addConnection('default','http','localhost', 7474, true, 'neo4j', '123123')
-				->setDefaultTimeout(180)
-				->setAutoFormatResponse(true)
-				->build();
-
-		return $client->sendCypherQuery($query, $params)->getResult();
+		return $this->client->sendCypherQuery($query, $params)->getResult();
 
 	}
 

@@ -6,6 +6,7 @@ use Annotations\Repository;
 use Annotations\Mapper;
 use Annotations\RelateTo;
 use Annotations\GraphProperty;
+use Core\Collection;
 
 /** 
  * @Node(labels = {"Person"})
@@ -18,7 +19,7 @@ class Person extends Entity{
 	 *
 	 * @var Models\EmailAddress
 	 */
-	protected $emails = [];
+	protected $emails = null;
 
 	/**
 	 * @GraphProperty(type = "string", key = "name")
@@ -37,6 +38,7 @@ class Person extends Entity{
 	public function __construct($name){
 
 		$this->name = $name;
+		$this->emails = new Collection();
 
 	}
 

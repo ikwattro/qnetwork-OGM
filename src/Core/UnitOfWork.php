@@ -81,16 +81,24 @@ class UnitOfWork {
 
 		// update the managed objects to allManaged
 		$this->managed = $allManaged;
-		
+
+		foreach ($this->managed as $object) {
+			// if it is a new entity, set auto generate id
+			$meta = $this->getClassMetadata($object);
+			$state = $this->getDomainObjectState($object);
+			// $state = ObjectState::STATE_NEW;
+			
+			if($state === ObjectState::STATE_NEW && $meta instanceof MetaNodeEntity) {
+				$this->generateIdForEntity($object, $meta);	
+			}
+			
+		}
+
 		foreach ($this->managed as $object) {
 			
 			$state = $this->getDomainObjectState($object);
 			switch ($state) {
 				case ObjectState::STATE_NEW:
-					// if entity, set auto generated id
-					$meta = $this->getClassMetadata($object);
-					$this->generateIdForEntity($object, $meta);	
-
 					$this->getMapper($object)->insert($object);
 					break;
 				
@@ -237,7 +245,7 @@ class UnitOfWork {
 		if( $this->removed->get($hash) ){
 			return ObjectState::STATE_REMOVED;
 		}
-			
+
 		// Value Objects are always NEW - they will always be merged
 		if($meta instanceof MetaNodeValueObject){
 			return ObjectState::STATE_NEW;
@@ -246,7 +254,8 @@ class UnitOfWork {
 		$entity = $object;
 
 		// DIRTY - if present in identity map, we update everything -> update properties + merge only relationships with value objects
-		$id = $meta->getId($entity);
+		$id = (string) $meta->getId($entity);
+		
 		if( $this->getIdentityMap()->get($id) ){
 			return ObjectState::STATE_DIRTY;
 		}
@@ -320,7 +329,7 @@ class UnitOfWork {
 	 * @throws Core\InvalidClassException
 	 */	
 	public function getRepository($class){
-
+		
 		// if we pass an object instead of the namespace of the class
 		if( is_object($class) ){
 			$class = get_class($class);

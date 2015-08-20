@@ -82,7 +82,7 @@ abstract class NodeMapper extends AbstractMapper{
 			}
 
 			$this->mergeRelationship($object, $value, $annotation->type, $annotation->direction);
-
+			
 		}
 
 	}
@@ -105,7 +105,7 @@ abstract class NodeMapper extends AbstractMapper{
 
 		$query = $matchFrom . ' ' . $matchTo;
 		$query .= " MERGE (from)-[r:{$type}]->(to) ";
-
+	
 		$this->addRelationshipStatement($query, $params);
 
 	}

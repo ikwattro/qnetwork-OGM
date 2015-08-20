@@ -100,7 +100,7 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 		for($i = 1; $i <= 100; $i++) {
 			
 			$email = new EmailAddress($this->faker->email);
-			$collection->add($email);
+			// $collection->add($email);
 			$person->addEmail($email);
 
 		}
@@ -118,6 +118,14 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 
 		$this->unitOfWork->commit();
 
+	}
+
+	public function testCase7(){
+
+		$rep = $this->unitOfWork->getRepository(User::class);
+		$user = $rep->findById('');
+		dd($user);
+		
 	}
 
 }
