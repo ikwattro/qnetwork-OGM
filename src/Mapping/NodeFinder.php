@@ -3,6 +3,7 @@ namespace Mapping;
 use Meta\NodeEntity as MetaNodeEntity;
 use Proxy\ProxyFactory;
 use Core\Collection;
+use Core\OGMException;
 
 class NodeFinder extends AbstractMapper{
 
@@ -61,7 +62,7 @@ class NodeFinder extends AbstractMapper{
 		 */
 		$class = $properties['_class'];
 		$meta = $this->getUnitOfWork()->getClassMetadata($class);
-
+		
 		$instance = $meta->newInstanceWithoutConstructor();
 		
 		$annotations = $meta->getProperties();
@@ -87,9 +88,8 @@ class NodeFinder extends AbstractMapper{
 		if($meta instanceof MetaNodeEntity){
 			$meta->setId($instance, $properties[$meta->getId()->propertyName]);
 		}
-		
+
 		$associations = $meta->getAssociations();
-		
 		foreach ($associations as $value) {
 			
 			if($value->collection){
@@ -104,7 +104,7 @@ class NodeFinder extends AbstractMapper{
 				$proxy->__setFinder($this);
 
 			}else{
-
+				// handle no reference present !!
 				$proxyFactory = new ProxyFactory();
 				$initializer = 
 					function (& $wrappedObject, $proxy, $method, $parameters, & $initializer) use($meta, $instance, $value){
@@ -118,8 +118,12 @@ class NodeFinder extends AbstractMapper{
         				$initializer   = null; 
     				};
     			
+    			if( ! $value->reference ){
+    				throw new OGMException('The ' . $meta->getClass() . ' has a @RelateTo property ('. $value->propertyName .') that does not have a reference. Please set a reference at the method annotation level.');
+    			}
+
 				$proxy = $proxyFactory->createFromDomainObject($value->reference, $initializer);
-				
+
 			}
 			
 			$meta->getReflector()->setPropertyValueForObject($instance, $value->propertyName, $proxy);
@@ -178,9 +182,11 @@ class NodeFinder extends AbstractMapper{
 
 		$collection = new Collection();
 		foreach ($resultSet->getNodes() as $node) {
+			
 			$collection->add( $this->load($node->getProperties()) );
-		}
 
+		}
+		
 		return $collection;
 
 	}

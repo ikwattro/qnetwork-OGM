@@ -23,10 +23,15 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 		\Kint::enabled(true);
 
 		$this->faker = \Faker\Factory::create();
+		$credentials['connection'] = 'http';
+		$credentials['host'] = 'localhost';
+		$credentials['port'] = 7474;
+		$credentials['username'] = 'neo4j';
+		$credentials['password'] = '123123';
 		
 		$reflector = new ReflectionClass(new AnnotationReader(), new AnnotationRegistry());
 		$this->unitOfWork = new UnitOfWork(
-			new NeoClient(), new MetadataFactory($reflector)
+			new NeoClient($credentials), new MetadataFactory($reflector)
 			);
 
 	}
@@ -96,7 +101,6 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 		$person = new Person($this->faker->name);
 		$this->unitOfWork->persist($person);
 
-		$collection = new Collection();
 		for($i = 1; $i <= 100; $i++) {
 			
 			$email = new EmailAddress($this->faker->email);
@@ -122,10 +126,10 @@ class OGMTest extends \PHPUnit_Framework_TestCase {
 
 	public function testCase7(){
 
-		$rep = $this->unitOfWork->getRepository(User::class);
-		$user = $rep->findById('');
-		dd($user);
-		
+		$rep = $this->unitOfWork->getRepository(Person::class);
+		$person = $rep->findById('cee80283-dd04-4ded-8fff-d21c0188a9db');
+		dd($person);
+
 	}
 
 }

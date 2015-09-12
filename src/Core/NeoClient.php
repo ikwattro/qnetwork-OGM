@@ -21,10 +21,19 @@ class NeoClient implements TransactionalManager{
 	 */
 	protected $relationshipStatements = [];
 
-	public function __construct(){
+	/**
+	 * Credentials should contain: 'connection', 'address', 'port', 'username', 'password'
+	 */
+	public function __construct($credentials){
 		
 		$this->client = ClientBuilder::create()
-				->addConnection('default','http','localhost', 7474, true, 'neo4j', '123123')
+				->addConnection('default', 
+					$credentials['connection'],
+					$credentials['host'], 
+					$credentials['port'], 
+					true, 
+					$credentials['username'], 
+					$credentials['password'])
 				->setDefaultTimeout(180)
 				->setAutoFormatResponse(true)
 				->build();
