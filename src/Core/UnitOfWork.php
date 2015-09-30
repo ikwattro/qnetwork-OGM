@@ -348,7 +348,12 @@ class UnitOfWork {
 	 * @throws Core\InvalidClassException
 	 */	
 	public function getMapper($object){
-		if($object === null){dd('ola');}
+		
+		// if we pass an object instead of the namespace of the class
+		if( is_object($class) ){
+			$class = get_class($class);
+		}
+		
 		$namespace = $this->getClassMetadata($object)->getMapperNamespace();
 		return new $namespace($this);
 
@@ -358,6 +363,19 @@ class UnitOfWork {
 
 		return new NodeFinder($this);
 
+	}
+
+	/**
+	 * Returning the results set from client
+	 *
+	 * @param string
+	 * @param array
+	 * @return ResultSet
+	 */
+	public function getResultSet($query, $params){
+		
+		return $this->getManager()->getResultSet($query, $params);
+		
 	}
 
 }
