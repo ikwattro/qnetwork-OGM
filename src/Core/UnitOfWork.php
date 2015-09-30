@@ -347,14 +347,14 @@ class UnitOfWork {
 	 * @return Mapping\AbstractRepository
 	 * @throws Core\InvalidClassException
 	 */	
-	public function getMapper($object){
+	public function getMapper($class){
 		
 		// if we pass an object instead of the namespace of the class
 		if( is_object($class) ){
 			$class = get_class($class);
 		}
-		
-		$namespace = $this->getClassMetadata($object)->getMapperNamespace();
+
+		$namespace = $this->getClassMetadata($class)->getMapperNamespace();
 		return new $namespace($this);
 
 	}
