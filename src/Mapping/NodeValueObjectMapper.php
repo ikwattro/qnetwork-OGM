@@ -55,7 +55,9 @@ class NodeValueObjectMapper extends NodeMapper{
 		$matchPropertiesCypher = $this->mapPropertiesArrayToCypherForMatch($matchProperties);
 
 		// building the query
-		$query = "MERGE (value:{$labelsCypher} {{$matchPropertiesCypher}}) ON CREATE SET {$propertiesCypher}";
+		$query = "MERGE (value:{$labelsCypher} {{$matchPropertiesCypher}}) 
+				ON CREATE SET {$propertiesCypher}
+				ON MATCH SET {$propertiesCypher}";
 		$this->addNodeStatement($query, $properties);
 		
 		$this->mergeAllRelationships($object);
