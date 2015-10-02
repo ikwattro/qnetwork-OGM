@@ -22,7 +22,12 @@ class LazyCollection extends Collection{
         $query = $this->statement[0] . " SKIP {$page} LIMIT {$limit} "; 
         $params = $this->statement[1];
         
-        return $this->finder->getCollection($query, $params);
+        $collection = $this->finder->getCollection($query, $params);
+        if($collection === null){
+            return new Collection();
+        }
+
+        return $collection;
 
     }
 
