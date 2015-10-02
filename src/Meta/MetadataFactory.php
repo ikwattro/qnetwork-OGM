@@ -63,7 +63,7 @@ class MetadataFactory {
 		}
 		
 		if($meta === null){
-			throw new InvalidClassException('The object provided for getting the meta class does not have the right annotations at the class level.');
+			throw new InvalidClassException('The object provided for getting the meta class does not have the right annotations at the class level: ' . $class);
 		}
 
 		$this->metas[$class] = $meta;
