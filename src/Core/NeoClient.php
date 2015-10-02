@@ -63,8 +63,10 @@ class NeoClient implements TransactionalManager{
 
 	public function clear(){
 
-		echo 'transactional manager clear';
-		die();
+		$this->nodeStatements = [];
+		$this->relationshipStatements = [];
+
+		return ;
 		
 	}
 

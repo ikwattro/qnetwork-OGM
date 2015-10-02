@@ -32,7 +32,9 @@ trait CypherTrait{
 
 		$cypher = '';
 		foreach ($properties as $property => $value) {
-			$cypher .= "$name.$property={" . $property ."},";
+			if( ! is_null($value) ){
+				$cypher .= "$name.$property={" . $property ."},";
+			}
 		}
 		
 		return rtrim($cypher, ",");

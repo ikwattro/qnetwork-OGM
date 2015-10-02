@@ -378,4 +378,20 @@ class UnitOfWork {
 		
 	}
 
+	/**
+	 * Clears everything that is currently stored in this UnitOfWork:
+	 * identityMap, managed, removed domain objects and all statements in the manager
+	 *
+	 */
+	public function clear(){
+
+		$this->identityMap->clear();
+		$this->managed->clear();
+		$this->removed->clear();
+		$this->managed->clear();
+
+		return ;
+
+	}	
+
 }
