@@ -31,6 +31,9 @@ abstract class NodeMapper extends AbstractMapper{
 		foreach ($values as $propertyName => $value) {
 			$properties[$annotations[$propertyName]->key] = $value;
 			settype($properties[$annotations[$propertyName]->key], $annotations[$propertyName]->type);
+			if( is_null($properties[$annotations[$propertyName]->key]) || empty($properties[$annotations[$propertyName]->key]) ){
+				unset($properties[$annotations[$propertyName]->key]);
+			}
 		}
 		
 		return $properties;

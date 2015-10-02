@@ -1,6 +1,6 @@
 {
     "name": "romulus/ogm",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "Object-to-Graph mapping system.",
     "license": "MIT",
     "keywords": ["neo4j"],
