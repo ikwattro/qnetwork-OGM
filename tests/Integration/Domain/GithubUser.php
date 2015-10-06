@@ -1,16 +1,24 @@
 <?php
 
-namespace Models;
+namespace Tests\Integration\Domain;
 
 use Annotations\Node;
 use Annotations\GraphProperty;
 use Annotations\Entity as GraphEntity;
+use Annotations\Id;
 
 /**
  * @Node(labels = {"GithubUser"})
  * @GraphEntity
  */
-class GithubUser extends Entity{
+class GithubUser
+{
+
+    /**
+     * @Id
+     * @var int
+     */
+    protected $id;
 
     /**
      * @GraphProperty(type="string", key="userName")
@@ -30,6 +38,14 @@ class GithubUser extends Entity{
     {
         $this->userName = $userName;
         $this->realName = $realName;
+    }
+
+    /**
+     * @return int
+     */
+    public function getId()
+    {
+        return $this->id;
     }
 
     /**
