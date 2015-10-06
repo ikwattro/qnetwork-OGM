@@ -4,7 +4,9 @@ use Neoxygen\NeoClient\ClientBuilder;
 
 class NeoClient implements TransactionalManager{
 
-	
+    /**
+     * @var \Neoxygen\NeoClient\Client
+     */
 	protected $client = null;
 
 	/**
@@ -99,6 +101,14 @@ class NeoClient implements TransactionalManager{
 		$this->relationshipStatements[] = $statement;
 
 	}
+
+    /**
+     * @return \Neoxygen\NeoClient\Client
+     */
+	public function getClient()
+    {
+        return $this->client;
+    }
 
 	protected function getNodeStatements(){
 
