@@ -18,7 +18,7 @@ class GithubUser extends Entity{
     protected $userName;
 
     /**
-     * @GraphProperty(type="string", key="userName")
+     * @GraphProperty(type="string", key="realName")
      */
     protected $realName;
 
